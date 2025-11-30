@@ -1,0 +1,272 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Finance Dashboard — Flawless</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="portal-api.js"></script>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <h2>FINANCE</h2>
+      <div class="nav-item" onclick="location.href='index.html'">← Home</div>
+      <div class="nav-item active" onclick="show('dashboard')">Dashboard</div>
+      <div class="nav-item" onclick="show('pending')">Pending Payroll</div>
+      <div class="nav-item" onclick="show('approved')">Approved</div>
+      <div class="nav-item" onclick="show('accounts')">Linked Accounts</div>
+      <div class="nav-item" onclick="show('messages')">Messages</div>
+      <div class="nav-item" onclick="show('audit')">Audit</div>
+    </aside>
+
+    <main class="content">
+      <div class="header">
+        <div><h2>Finance Dashboard</h2><div class="small">Org: <span id="orgLabelF"></span></div></div>
+        <div class="top-links"><a href="hr-dashboard.html">HR</a> <a href="teacher-dashboard.html">Teacher</a></div>
+      </div>
+
+      <div id="dashboard" class="card">
+        <h3>Overview</h3>
+        <div class="kpi-grid">
+          <div class="kpi"><i class="fa fa-sack-dollar"></i><div><div class="value" id="kpPending">0</div><div class="small">Pending batches</div></div></div>
+          <div class="kpi"><i class="fa fa-check-circle"></i><div><div class="value" id="kpApproved">0</div><div class="small">Approved</div></div></div>
+          <div class="kpi"><i class="fa fa-coins"></i><div><div class="value" id="kpAccounts">0</div><div class="small">Linked accounts</div></div></div>
+        </div>
+      </div>
+
+      <section id="pending" class="card" style="display:none">
+        <h3>Pending Payroll</h3>
+        <div class="table-wrap"><table id="pendingTable"><thead><tr><th>#</th><th>Batch</th><th>Submitted By</th><th>Period</th><th>Total</th><th>Status</th><th>Actions</th></tr></thead><tbody></tbody></table></div>
+      </section>
+
+      <section id="approved" class="card" style="display:none">
+        <h3>Approved / Paid</h3>
+        <div class="table-wrap"><table id="approvedTable"><thead><tr><th>#</th><th>Batch</th><th>Approved By</th><th>Period</th><th>Total</th><th>Paid On</th><th>Actions</th></tr></thead><tbody></tbody></table></div>
+      </section>
+
+      <section id="accounts" class="card" style="display:none">
+        <h3>Linked Payment Accounts</h3>
+        <div style="display:flex;gap:8px;align-items:center">
+          <select id="accType" class="input"><option value="momo">Mobile Money</option><option value="bank">Bank</option><option value="wallet">Internal Wallet</option></select>
+          <input id="accName" class="input" placeholder="Name (e.g., MTN Pay)">
+          <input id="accNumber" class="input" placeholder="Account number">
+          <button class="btn" onclick="addAccount()">Add</button>
+        </div>
+        <div style="margin-top:12px" id="accountList"></div>
+      </section>
+
+      <section id="messages" class="card" style="display:none">
+        <h3>Messages</h3>
+        <div style="display:flex;gap:8px">
+          <input id="msgToF" class="input" placeholder="To (hr email)">
+          <input id="msgSubjectF" class="input" placeholder="Subject">
+        </div>
+        <textarea id="msgBodyF" class="input" rows="4" style="width:100%;margin-top:8px"></textarea>
+        <div style="margin-top:8px"><button class="btn primary" onclick="sendFinanceMsg()">Send</button></div>
+        <div style="margin-top:12px" id="messagesList"></div>
+      </section>
+
+      <section id="audit" class="card" style="display:none">
+        <h3>Audit Trail</h3><div id="auditList"></div>
+      </section>
+
+    </main>
+  </div>
+
+<script>
+  const ORG = PortalAPI.activeOrg();
+  document.getElementById('orgLabelF').textContent = ORG;
+
+  // toggles
+  function show(id){
+    document.querySelectorAll('main .card, main section').forEach(e=> e.style.display='none');
+    if(id==='dashboard') document.getElementById('dashboard').style.display='block';
+    else document.getElementById(id).style.display='block';
+    if(id==='pending') renderPending();
+    if(id==='approved') renderApproved();
+    if(id==='accounts') renderAccounts();
+    if(id==='messages') renderMessages();
+    if(id==='audit') renderAudit();
+  }
+  show('dashboard');
+
+  // Storage helpers
+  function formatCurrency(n){ return '₵ ' + Number(n||0).toLocaleString(); }
+  function pushAudit(actor, action){ PortalAPI.push(PortalAPI.KEYS.AUDIT(), { id: PortalAPI.uid('a'), actor, action, time: new Date().toISOString() }); renderAudit(); }
+
+  // render pending
+  function renderPending(){
+    const arr = PortalAPI.read(PortalAPI.KEYS.PENDING()) || [];
+    const tbody = document.querySelector('#pendingTable tbody'); tbody.innerHTML = '';
+    arr.slice().reverse().forEach((b,i)=>{
+      const row = document.createElement('tr');
+      row.innerHTML = `<td>${i+1}</td>
+        <td>${b.batchId}</td>
+        <td>${b.submittedBy}</td>
+        <td>${b.period}</td>
+        <td>${formatCurrency(b.total)}</td>
+        <td>${b.status||'pending'}</td>
+        <td>
+          <button class="btn" onclick="viewBatch('${b.batchId}')">View</button>
+          <button class="btn primary" onclick="approveBatch('${b.batchId}','bank')">Approve (Bank)</button>
+          <button class="btn" onclick="rejectBatch('${b.batchId}')">Reject</button>
+        </td>`;
+      tbody.appendChild(row);
+    });
+    document.getElementById('kpPending').textContent = arr.filter(x=> x.status === 'pending').length;
+  }
+
+  function viewBatch(batchId){
+    const arr = PortalAPI.read(PortalAPI.KEYS.PENDING());
+    const b = arr.find(x=> x.batchId === batchId);
+    if(!b) return alert('Not found');
+    const lines = (b.items||[]).map(it=> `${it.employee} — Net ₵${it.net}`).join('\n');
+    alert(`Batch ${b.batchId}\nPeriod: ${b.period}\nTotal: ₵${b.total}\n\nItems:\n${lines}`);
+  }
+
+  async function approveBatch(batchId, method='bank'){
+    // pick available account if any
+    const accounts = PortalAPI.read(PortalAPI.KEYS.ACCOUNTS());
+    const account = accounts[0] || null;
+
+    // find batch
+    const pend = PortalAPI.read(PortalAPI.KEYS.PENDING());
+    const idx = pend.findIndex(x=> x.batchId === batchId);
+    if(idx === -1) return show('Batch not found');
+    const batch = pend[idx];
+    if(!confirm(`Approve and pay batch ${batchId} ?`)) return;
+
+    // Simulate executing payments per item
+    const results = [];
+    for(const it of batch.items){
+      const ref = PortalAPI.uid('pay');
+      const res = await PortalAPI.mockPaymentGateway({ method, account: account ? account.name : 'no-account', amount: Number(it.net||0), reference: ref });
+      results.push({ item: it, result: res });
+      // log payment if success
+      if(res.success){
+        PortalAPI.push(PortalAPI.KEYS.PAYMENTS(), { id: res.txId, batchId: batch.batchId, employee: it.employee, amount: it.net, method: res.provider, account: res.account, time: res.time });
+      }
+    }
+
+    // move batch to approved
+    const approved = PortalAPI.read(PortalAPI.KEYS.APPROVED());
+    batch.approvedBy = (JSON.parse(localStorage.getItem('hr_current_user')||'{}').email) || 'finance@local';
+    batch.approvedAt = new Date().toISOString();
+    batch.paidOn = new Date().toISOString();
+    batch.status = 'approved';
+    approved.push(batch);
+    PortalAPI.save(PortalAPI.KEYS.APPROVED(), approved);
+
+    // mark pending removed
+    pend.splice(idx,1);
+    PortalAPI.save(PortalAPI.KEYS.PENDING(), pend);
+
+    // update salary sheets
+    const sheets = PortalAPI.read(PortalAPI.KEYS.SALARY_SHEETS());
+    const sIdx = sheets.findIndex(s=> s.id === batch.batchId);
+    if(sIdx>=0){ sheets[sIdx].status='approved'; sheets[sIdx].paidOn = new Date().toISOString(); PortalAPI.save(PortalAPI.KEYS.SALARY_SHEETS(), sheets); }
+
+    pushAudit('Finance', `Approved and paid batch ${batchId}`);
+    // notify HR (message)
+    PortalAPI.push(PortalAPI.KEYS.MESSAGES(), { id: PortalAPI.uid('m'), from:'finance@'+ORG.toLowerCase()+'.local', to: batch.submittedBy || 'hr@'+ORG.toLowerCase()+'.local', subject:`Batch ${batchId} approved`, body:'Paid via mock gateway', date: new Date().toISOString() });
+
+    show('Batch approved & payments attempted');
+    renderPending(); renderApproved();
+  }
+
+  function rejectBatch(batchId){
+    const arr = PortalAPI.read(PortalAPI.KEYS.PENDING());
+    const b = arr.find(x=> x.batchId === batchId);
+    if(!b) return;
+    const reason = prompt('Reason for rejection','Incorrect totals');
+    b.status = 'rejected'; b.rejectionReason = reason; b.processedAt = new Date().toISOString();
+    PortalAPI.save(PortalAPI.KEYS.PENDING(), arr);
+    pushAudit('Finance','Rejected batch '+batchId);
+    PortalAPI.push(PortalAPI.KEYS.MESSAGES(), { id:PortalAPI.uid('m'), from:'finance@'+ORG.toLowerCase()+'.local', to:b.submittedBy || 'hr@'+ORG.toLowerCase()+'.local', subject:`Batch ${batchId} rejected`, body:reason, date:new Date().toISOString() });
+    renderPending();
+  }
+
+  function renderApproved(){
+    const arr = PortalAPI.read(PortalAPI.KEYS.APPROVED());
+    const tbody = document.querySelector('#approvedTable tbody'); tbody.innerHTML = '';
+    arr.slice().reverse().forEach((b,i)=>{
+      const row = document.createElement('tr');
+      row.innerHTML = `<td>${i+1}</td><td>${b.batchId}</td><td>${b.approvedBy||'Finance'}</td><td>${b.period}</td><td>${formatCurrency(b.total)}</td><td>${b.paidOn||'—'}</td><td><button class="btn" onclick="downloadPayslips('${b.batchId}')">Payslips</button></td>`;
+      tbody.appendChild(row);
+    });
+    document.getElementById('kpApproved').textContent = arr.length;
+  }
+
+  function downloadPayslips(batchId){
+    const sheets = PortalAPI.read(PortalAPI.KEYS.SALARY_SHEETS());
+    const sheet = sheets.find(s=> s.id === batchId);
+    if(!sheet) return alert('No paysheet found');
+    // generate per employee
+    sheet.items.forEach(it=>{
+      PortalAPI.generatePayslipPdf({
+        employeeName: it.employee,
+        period: sheet.period,
+        gross: it.gross || it.salary || 0,
+        tax: it.tax || 0,
+        deductions: it.deductions || 0,
+        net: it.net || 0,
+        notes: `Batch ${batchId}`
+      });
+    });
+    show('Payslips generated (downloads)');
+  }
+
+  // accounts
+  function addAccount(){
+    const type = document.getElementById('accType').value;
+    const name = document.getElementById('accName').value.trim();
+    const number = document.getElementById('accNumber').value.trim();
+    if(!name || !number) return alert('fill fields');
+    const accs = PortalAPI.read(PortalAPI.KEYS.ACCOUNTS());
+    accs.push({ id: PortalAPI.uid('acc'), type, name, number });
+    PortalAPI.save(PortalAPI.KEYS.ACCOUNTS(), accs);
+    renderAccounts();
+  }
+  function renderAccounts(){
+    const accs = PortalAPI.read(PortalAPI.KEYS.ACCOUNTS());
+    document.getElementById('accountList').innerHTML = accs.map(a=> `<div class="card"><strong>${a.name}</strong> (${a.type}) — ${a.number}</div>`).join('') || '<div class="small">No accounts</div>';
+    document.getElementById('kpAccounts').textContent = accs.length;
+  }
+
+  // messages
+  function sendFinanceMsg(){
+    const to = document.getElementById('msgToF').value.trim();
+    const subj = document.getElementById('msgSubjectF').value.trim();
+    const body = document.getElementById('msgBodyF').value.trim();
+    if(!subj || !body) return alert('complete fields');
+    PortalAPI.push(PortalAPI.KEYS.MESSAGES(), { id: PortalAPI.uid('m'), from:'finance@'+ORG.toLowerCase()+'.local', to, subject:subj, body, date:new Date().toISOString() });
+    pushAudit('Finance', `Message to ${to}: ${subj}`);
+    show('Message sent');
+    renderMessages();
+  }
+  function renderMessages(){
+    const msgs = PortalAPI.read(PortalAPI.KEYS.MESSAGES()).slice().reverse();
+    document.getElementById('messagesList').innerHTML = msgs.map(m=> `<div class="card"><strong>${m.subject}</strong> <div class="small">${m.date} • ${m.from} → ${m.to}</div><div>${m.body}</div></div>`).join('');
+  }
+
+  function renderAudit(){
+    const arr = PortalAPI.read(PortalAPI.KEYS.AUDIT()).slice().reverse();
+    document.getElementById('auditList').innerHTML = arr.map(a=> `<div class="small">${a.time} • <strong>${a.actor}</strong> — ${a.action}</div>`).join('');
+  }
+
+  // small show helper
+  function show(msg){
+    const t = document.querySelector('.toast') || createToast(); t.textContent = msg; t.classList.add('show'); setTimeout(()=> t.classList.remove('show'), 2600);
+  }
+  function createToast(){ const t = document.createElement('div'); t.className='toast'; document.body.appendChild(t); return t; }
+
+  // sync on storage changes
+  window.addEventListener('storage', ()=> { renderPending(); renderApproved(); renderAccounts(); renderMessages(); renderAudit(); });
+
+  // initial render
+  renderPending(); renderApproved(); renderAccounts(); renderMessages(); renderAudit();
+</script>
+</body>
+</html>
