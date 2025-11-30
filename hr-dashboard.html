@@ -1,0 +1,262 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>HR Dashboard — Flawless</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="portal-api.js"></script>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <h2>HR PANEL</h2>
+      <div class="nav-item" onclick="location.href='index.html'">← Home</div>
+      <div class="nav-item active" onclick="showSection('dashboard')">Dashboard</div>
+      <div class="nav-item" onclick="showSection('payroll')">Payroll</div>
+      <div class="nav-item" onclick="showSection('employees')">Employees</div>
+      <div class="nav-item" onclick="showSection('announcements')">Announcements</div>
+      <div class="nav-item" onclick="showSection('messages')">Messages</div>
+    </aside>
+
+    <main class="content">
+      <div class="header">
+        <div>
+          <h2 id="pageTitle">HR Dashboard</h2>
+          <div class="small">Org: <span id="orgLabel"></span></div>
+        </div>
+        <div class="top-links">
+          <a href="finance-dashboard.html">Go to Finance</a>
+          <a href="teacher-dashboard.html">Go to Teacher</a>
+        </div>
+      </div>
+
+      <div id="dashboard" class="card">
+        <h3>Quick Actions</h3>
+        <div style="display:flex;gap:8px">
+          <button class="btn primary" onclick="showSection('payroll')">Prepare Payroll</button>
+          <button class="btn" onclick="sendBatchDemo()">Seed demo payroll (HR)</button>
+        </div>
+      </div>
+
+      <section id="payroll" class="card" style="display:none">
+        <h3>Prepare Payroll Batch</h3>
+        <div class="small">Create a payroll batch (add bonuses/deductions per employee) then Submit to Finance.</div>
+
+        <div style="margin-top:12px">
+          <label class="small">Batch period</label>
+          <input id="batchPeriod" class="input" type="month" value="" />
+        </div>
+
+        <div style="margin-top:12px" id="payrollEntriesWrap">
+          <div class="small">Entries</div>
+          <table id="payrollEntriesTable">
+            <thead><tr><th>#</th><th>Employee</th><th>Gross</th><th>Bonuses</th><th>Deductions</th><th>Net</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <div style="margin-top:12px">
+          <button class="btn" onclick="addPayrollRow()">Add Row</button>
+          <button class="btn primary" onclick="computeTotals()">Recalculate</button>
+          <button class="btn primary" onclick="submitBatchToFinance()">Send to Finance for Payment</button>
+        </div>
+      </section>
+
+      <section id="employees" class="card" style="display:none">
+        <h3>Employees (Simple list)</h3>
+        <div class="small">Add employees used to build payroll rows</div>
+        <div style="margin-top:8px;display:flex;gap:8px">
+          <input id="empName" class="input" placeholder="Full name">
+          <input id="empSalary" class="input" placeholder="Monthly salary" type="number">
+          <button class="btn" onclick="addEmployee()">Add</button>
+        </div>
+        <div style="margin-top:12px" class="table-wrap">
+          <table id="empTable">
+            <thead><tr><th>#</th><th>Name</th><th>Salary</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="announcements" class="card" style="display:none">
+        <h3>Announcements</h3>
+        <div class="small">Post an announcement (visible in teacher dashboard)</div>
+        <div style="margin-top:8px;display:flex;gap:8px">
+          <input id="annText" class="input" placeholder="Announcement text">
+          <button class="btn" onclick="postAnnouncement()">Post</button>
+        </div>
+      </section>
+
+      <section id="messages" class="card" style="display:none">
+        <h3>Messages to Finance</h3>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input id="msgSubject" class="input" placeholder="Subject">
+          <input id="msgTo" class="input" placeholder="To (finance email)">
+        </div>
+        <textarea id="msgBody" class="input" rows="4" style="width:100%;margin-top:8px"></textarea>
+        <div style="margin-top:8px"><button class="btn primary" onclick="sendMessage()">Send</button></div>
+      </section>
+    </main>
+  </div>
+
+<script>
+  // local helper
+  const ORG = PortalAPI.activeOrg();
+  document.getElementById('orgLabel').textContent = ORG;
+
+  // initialize storage areas if missing
+  function ensure(key){ if(!localStorage.getItem(key)) localStorage.setItem(key, JSON.stringify([])); }
+  ensure(PortalAPI.KEYS.PENDING());
+  ensure(PortalAPI.KEYS.APPROVED());
+  ensure(PortalAPI.KEYS.SALARY_SHEETS());
+  ensure(PortalAPI.KEYS.ACCOUNTS ? PortalAPI.KEYS.ACCOUNTS() : 'NO' );
+
+  // UI helpers
+  function showSection(name){
+    document.querySelectorAll('main section').forEach(s=> s.style.display='none');
+    const el = document.getElementById(name);
+    if(el) el.style.display = 'block';
+  }
+
+  // Employees
+  function addEmployee(){
+    const name = document.getElementById('empName').value.trim();
+    const salary = Number(document.getElementById('empSalary').value) || 0;
+    if(!name) return alert('Enter name');
+    const key = `${ORG}_employees`;
+    const list = PortalAPI.read(key);
+    list.push({ id: PortalAPI.uid('e'), name, salary });
+    PortalAPI.save(key, list);
+    renderEmployees();
+    document.getElementById('empName').value=''; document.getElementById('empSalary').value='';
+  }
+  function renderEmployees(){
+    const key = `${ORG}_employees`;
+    const list = PortalAPI.read(key);
+    const tbody = document.querySelector('#empTable tbody');
+    tbody.innerHTML='';
+    list.forEach((e,i)=> tbody.innerHTML += `<tr><td>${i+1}</td><td>${e.name}</td><td>₵ ${Number(e.salary).toLocaleString()}</td></tr>`);
+  }
+  renderEmployees();
+
+  // Payroll rows
+  function addPayrollRow(){
+    const tbody = document.querySelector('#payrollEntriesTable tbody');
+    const id = PortalAPI.uid('r');
+    const row = document.createElement('tr');
+    row.dataset.rid = id;
+    row.innerHTML = `<td>—</td>
+      <td><input class="input row-emp" placeholder="Employee name"></td>
+      <td><input class="input row-gross" type="number" value="0"></td>
+      <td><input class="input row-bonus" type="number" value="0"></td>
+      <td><input class="input row-ded" type="number" value="0"></td>
+      <td class="row-net">₵0</td>`;
+    tbody.appendChild(row);
+  }
+
+  function computeTotals(){
+    const rows = Array.from(document.querySelectorAll('#payrollEntriesTable tbody tr'));
+    let total = 0;
+    rows.forEach((tr, idx)=>{
+      tr.querySelector('td:first-child').textContent = idx+1;
+      const name = tr.querySelector('.row-emp').value || 'Unknown';
+      const gross = Number(tr.querySelector('.row-gross').value) || 0;
+      const bonus = Number(tr.querySelector('.row-bonus').value) || 0;
+      const ded = Number(tr.querySelector('.row-ded').value) || 0;
+      const computedGross = gross + bonus;
+      const tax = Math.round(computedGross * 0.12);
+      const net = computedGross - tax - ded;
+      tr.querySelector('.row-net').textContent = `₵${net.toLocaleString()}`;
+      total += net;
+      tr.dataset.entry = JSON.stringify({ employee:name, gross:computedGross, tax, deductions:ded, net });
+    });
+    showToast(`Calculated total net: ₵${total.toLocaleString()}`);
+  }
+
+  // Submit batch to finance
+  function submitBatchToFinance(){
+    computeTotals();
+    const rows = Array.from(document.querySelectorAll('#payrollEntriesTable tbody tr'))
+      .map(tr => JSON.parse(tr.dataset.entry || '{}'));
+    if(!rows.length) return alert('No payroll rows');
+    const period = document.getElementById('batchPeriod').value || new Date().toISOString().split('T')[0];
+    const batch = {
+      batchId: 'BATCH_'+Date.now().toString(36).slice(-6).toUpperCase(),
+      submittedBy: (JSON.parse(localStorage.getItem('hr_current_user')||'{}').email) || 'hr@local',
+      period,
+      items: rows,
+      total: rows.reduce((s,r)=> s + Number(r.net||0), 0),
+      status:'pending',
+      submittedAt: new Date().toISOString()
+    };
+    PortalAPI.push(PortalAPI.KEYS.PENDING(), batch);
+    PortalAPI.push(PortalAPI.KEYS.SALARY_SHEETS(), { id: batch.batchId, items: rows, period, status:'pending' });
+    pushAudit('HR', `Submitted payroll ${batch.batchId}`);
+    showToast('Batch submitted to Finance');
+    // notify finance via storage event
+    window.dispatchEvent(new Event('storage'));
+    // clear rows
+    document.querySelector('#payrollEntriesTable tbody').innerHTML = '';
+  }
+
+  function sendBatchDemo(){
+    // small helper to seed a demo batch
+    const batch = {
+      batchId: 'BATCH_'+Date.now().toString(36).slice(-6).toUpperCase(),
+      submittedBy: 'hr@flawless.local',
+      period: new Date().toISOString().split('T')[0],
+      items: [
+        { employee:'Adjei James', gross:3500, tax:420, deductions:0, net:3080 },
+        { employee:'Ama Serwaa', gross:2200, tax:264, deductions:0, net:1936 }
+      ],
+      total: 5016,
+      status:'pending',
+      submittedAt: new Date().toISOString()
+    };
+    PortalAPI.push(PortalAPI.KEYS.PENDING(), batch);
+    PortalAPI.push(PortalAPI.KEYS.SALARY_SHEETS(), { id: batch.batchId, items: batch.items, period: batch.period, status:'pending' });
+    pushAudit('HR','Seeded demo batch '+batch.batchId);
+    showToast('Demo batch created');
+  }
+
+  // messages to finance
+  function sendMessage(){
+    const subj = document.getElementById('msgSubject').value.trim();
+    const to = document.getElementById('msgTo').value.trim() || 'finance@flawless.local';
+    const body = document.getElementById('msgBody').value.trim();
+    if(!subj || !body) return alert('Complete message');
+    PortalAPI.push(PortalAPI.KEYS.MESSAGES(), { id: PortalAPI.uid('m'), from: (JSON.parse(localStorage.getItem('hr_current_user')||'{}').email)||'hr@local', to, subject:subj, body, date:new Date().toISOString() });
+    pushAudit('HR',`Messaged Finance: ${subj}`);
+    showToast('Message sent to Finance');
+    document.getElementById('msgSubject').value=''; document.getElementById('msgBody').value='';
+  }
+
+  // audit helper
+  function pushAudit(actor, action){
+    PortalAPI.push(PortalAPI.KEYS.AUDIT(), { id: PortalAPI.uid('a'), actor, action, time: new Date().toISOString() });
+  }
+
+  // small toast
+  function showToast(m){
+    const t = document.querySelector('.toast') || createToast();
+    t.textContent = m; t.classList.add('show');
+    setTimeout(()=> t.classList.remove('show'), 2800);
+  }
+  function createToast(){
+    const t = document.createElement('div'); t.className='toast'; document.body.appendChild(t); return t;
+  }
+
+  // listen to external storage changes (finance approval etc.)
+  window.addEventListener('storage', ()=> {
+    // when finance approves / pays, HR may want to reflect status
+    console.log('storage sync HR','reloading...');
+  });
+
+  // render employees on load
+  renderEmployees();
+</script>
+
+</body>
+</html>
