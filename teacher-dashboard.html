@@ -1,125 +1,1484 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="utf-8">
-  <title>Teacher Dashboard — Flawless</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <link rel="stylesheet" href="styles.css">
-  <script src="portal-api.js"></script>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Teacher Portal — Flawless Graphics</title>
+
+  <!-- Font Awesome (icons) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+  <!-- Chart.js placeholder (used in later parts) -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" defer></script>
+
+  <style>
+    /* ==========================================
+       PART 1 - GLOBAL THEME & LAYOUT (Teacher)
+       ========================================== */
+
+    :root{
+      --bg: #f4f7fb;
+      --panel: #ffffff;
+      --muted: #6b7280;
+      --text: #0b1b2e;
+      --accent: #0ea5ff;      /* primary blue */
+      --accent-2: #7c3aed;    /* purple */
+      --success: #10b981;
+      --danger: #ef4444;
+      --glass: rgba(11,27,46,0.04);
+      --radius: 12px;
+      --shadow-1: 0 8px 26px rgba(8,20,40,0.06);
+      --sidebar: linear-gradient(180deg,#00224a,#06305a);
+      --max-w: 1200px;
+      --transition: 220ms cubic-bezier(.2,.9,.3,1);
+      --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    }
+
+    /* Dark theme toggle: add .dark to <html> */
+    .dark{
+      --bg: #071026;
+      --panel: #0f1724;
+      --muted: #9fb4c9;
+      --text: #e8f6ff;
+      --accent: #00e0ff;
+      --accent-2: #b08bff;
+      --glass: rgba(255,255,255,0.03);
+      --sidebar: linear-gradient(180deg,#041428,#072439);
+    }
+
+    *{ box-sizing: border-box; -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale; }
+    html,body{ height:100%; margin:0; font-family: var(--font-sans); background: linear-gradient(180deg,var(--bg), color-mix(in srgb, var(--bg) 95%, #fff 5%)); color:var(--text); }
+
+    /* App container */
+    .app {
+      min-height: 100vh;
+      display:flex;
+      justify-content:center;
+      padding:20px;
+    }
+    .container {
+      width:100%;
+      max-width: var(--max-w);
+      display:flex;
+      gap:18px;
+      align-items:flex-start;
+    }
+
+    /* ---------------- SIDEBAR ---------------- */
+    .sidebar {
+      width: 260px;
+      background: var(--sidebar);
+      border-radius: 12px;
+      padding: 18px;
+      box-shadow: var(--shadow-1);
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+      min-height: calc(100vh - 40px);
+      position: sticky;
+      top: 20px;
+    }
+
+    .brand {
+      display:flex;
+      gap:12px;
+      align-items:center;
+    }
+    .logo {
+      width:48px;height:48px;border-radius:10px; display:flex; align-items:center; justify-content:center;
+      background: linear-gradient(90deg,var(--accent),var(--accent-2)); color:#021; font-weight:800;
+      box-shadow: 0 8px 28px rgba(3,18,36,0.12);
+      font-size:18px;
+    }
+    .brand h3 { margin:0; font-size:14px; color: rgba(255,255,255,0.95) }
+
+    .sidebar .small { font-size:12px; color: rgba(255,255,255,0.8) }
+
+    .nav {
+      display:flex; flex-direction:column; gap:8px; margin-top:8px;
+    }
+    .nav button {
+      display:flex; gap:12px; align-items:center;
+      padding:10px 12px; border-radius:10px; border:0; cursor:pointer;
+      background: transparent; color: rgba(255,255,255,0.95); font-weight:700; text-align:left;
+      transition: background var(--transition), transform var(--transition);
+    }
+    .nav button i{ width:20px; text-align:center; font-size:14px; opacity:0.9; }
+    .nav button:hover{ transform: translateY(-3px); background: rgba(255,255,255,0.03); }
+    .nav button.active{ background: linear-gradient(90deg,var(--accent),var(--accent-2)); color:#021; box-shadow: 0 12px 40px rgba(3,18,36,0.18); }
+
+    .sidebar .footer { margin-top:auto; display:flex; align-items:center; justify-content:space-between; gap:8px; }
+
+    /* ---------------- MAIN CONTENT ---------------- */
+    .main {
+      flex:1;
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+    }
+
+    .topbar {
+      display:flex; align-items:center; justify-content:space-between; gap:12px;
+      margin-bottom:6px;
+    }
+    .title-group { display:flex; gap:12px; align-items:center; }
+    .title { font-size:20px; font-weight:800; margin:0; }
+    .subtitle { color:var(--muted); font-size:13px; margin-top:4px; }
+
+    .controls { display:flex; gap:10px; align-items:center; }
+
+    .select, input[type="text"], input[type="search"], input[type="date"], textarea {
+      padding:10px 12px; border-radius:10px; border:1px solid var(--glass); background:var(--panel); color:var(--text);
+      outline:none; min-width:140px; transition: box-shadow var(--transition), border-color var(--transition);
+    }
+    .select:focus, input:focus, textarea:focus{ box-shadow: 0 14px 40px rgba(11,27,46,0.06); }
+
+    .btn {
+      padding:8px 12px; border-radius:10px; border:0; cursor:pointer; font-weight:800;
+      background:var(--panel); color:var(--text); border:1px solid var(--glass);
+      transition: transform var(--transition), box-shadow var(--transition);
+    }
+    .btn:hover { transform: translateY(-3px); box-shadow: var(--shadow-1); }
+    .btn.primary { background: linear-gradient(90deg,var(--accent),var(--accent-2)); color:#021; border:0; box-shadow:0 10px 26px rgba(11,27,46,0.12); }
+    .btn.ghost { background: transparent; border:1px solid var(--glass); }
+    .btn.danger { background: var(--danger); color:white; }
+
+    /* KPI grid */
+    .grid { display:grid; gap:12px; grid-template-columns: repeat(auto-fit, minmax(220px,1fr)); margin-bottom:6px; }
+    .kpi {
+      background: var(--panel); padding:14px; border-radius:12px; border:1px solid var(--glass); box-shadow: var(--shadow-1);
+      display:flex; gap:12px; align-items:center;
+    }
+    .kpi i { font-size:26px; color:var(--accent); padding:10px; border-radius:10px; background: rgba(3,18,36,0.03); }
+    .kpi .value { font-size:20px; font-weight:900; color:var(--text) }
+    .kpi .label { color:var(--muted); font-size:13px; }
+
+    /* Card */
+    .card {
+      background: linear-gradient(180deg,var(--panel), color-mix(in srgb, var(--panel) 94%, #fff 6%));
+      padding:16px; border-radius:12px; border:1px solid var(--glass); box-shadow: var(--shadow-1);
+    }
+    .card-title { font-size:16px; font-weight:800; margin-bottom:8px; color:var(--text); }
+    .tiny { font-size:13px; color:var(--muted); }
+
+    /* Table */
+    .table-wrap { overflow:auto; border-radius:8px; }
+    table { width:100%; border-collapse:collapse; min-width:720px; }
+    thead th { text-align:left; padding:12px; font-size:13px; color:var(--muted); position:sticky; top:0; background:transparent; }
+    tbody td { padding:12px; border-bottom:1px solid var(--glass); color:var(--text); vertical-align:middle; }
+
+    /* Modal basics (used in later parts) */
+    .modal { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background: rgba(2,6,23,0.45); z-index:999; visibility:hidden; opacity:0; transition:opacity 180ms ease; }
+    .modal.show{ visibility:visible; opacity:1; }
+    .modal-card { width:94%; max-width:780px; background:var(--panel); border-radius:12px; padding:18px; box-shadow: var(--shadow-1); }
+
+    /* Toast */
+    #toast { position:fixed; right:20px; bottom:20px; padding:10px 14px; border-radius:12px; background: linear-gradient(90deg,var(--accent),var(--accent-2)); color:#021; font-weight:800; transform: translateY(8px); opacity:0; transition:all 260ms ease; box-shadow: 0 12px 36px rgba(3,18,36,0.18); z-index:10000; }
+    #toast.show { opacity:1; transform:none }
+
+    /* Responsive */
+    @media (max-width:980px){
+      .sidebar{ display:none; }
+      .container{ padding:6px; }
+      .card{ padding:12px; }
+    }
+  </style>
 </head>
 <body>
   <div class="app">
-    <aside class="sidebar">
-      <h2>TEACHER</h2>
-      <div class="nav-item" onclick="location.href='index.html'">← Home</div>
-      <div class="nav-item active" onclick="show('dashboard')">Dashboard</div>
-      <div class="nav-item" onclick="show('attendance')">Attendance</div>
-      <div class="nav-item" onclick="show('timetable')">Timetable</div>
-      <div class="nav-item" onclick="show('payslips')">Payslips</div>
-    </aside>
+    <div class="container" role="application">
 
-    <main class="content">
-      <div class="header">
-        <div><h2>Teacher Dashboard</h2><div class="small">Org: <span id="orgLabelT"></span></div></div>
-        <div class="top-links"><a href="hr-dashboard.html">HR</a> <a href="finance-dashboard.html">Finance</a></div>
-      </div>
-
-      <div id="dashboard" class="card">
-        <h3>Welcome</h3>
-        <div class="small">Quick actions below</div>
-      </div>
-
-      <section id="attendance" class="card" style="display:none">
-        <h3>Clock In / Out</h3>
-        <div style="display:flex;gap:8px">
-          <button class="btn" onclick="clockIn()">Clock In</button>
-          <button class="btn" onclick="clockOut()">Clock Out</button>
+      <!-- SIDEBAR -->
+      <aside class="sidebar" aria-label="Teacher navigation">
+        <div class="brand">
+          <div class="logo">TG</div>
+          <div>
+            <h3>FLAWLESS TEACHER</h3>
+            <div class="small">Portal</div>
+          </div>
         </div>
-        <div style="margin-top:12px" id="attLog"></div>
-      </section>
 
-      <section id="timetable" class="card" style="display:none">
-        <h3>Timetable</h3>
-        <div class="small">Teacher timetable synced from HR (demo)</div>
-        <div id="tt"></div>
-      </section>
+        <div class="small" id="orgLabel">Organization — Loading…</div>
 
-      <section id="payslips" class="card" style="display:none">
-        <h3>Your Payslips</h3>
-        <div id="paysList"></div>
-      </section>
+        <nav class="nav" role="navigation" aria-label="Main">
+          <button class="active" data-section="home"><i class="fa fa-house"></i> Dashboard</button>
+          <button data-section="attendance"><i class="fa fa-calendar-check"></i> Attendance</button>
+          <button data-section="notes"><i class="fa fa-file-lines"></i> Lesson Notes</button>
+          <button data-section="assess"><i class="fa fa-chart-simple"></i> Assessments</button>
+          <button data-section="assignments"><i class="fa fa-book-open"></i> Assignments</button>
+          <button data-section="timetable"><i class="fa fa-clock"></i> Timetable</button>
+          <button data-section="payroll"><i class="fa fa-sack-dollar"></i> Payroll & Payslips</button>
+          <button data-section="requests"><i class="fa fa-inbox"></i> Requests</button>
+          <button data-section="messages"><i class="fa fa-comments"></i> Messages</button>
+          <button data-section="profile"><i class="fa fa-user"></i> Profile</button>
+          <button data-section="analytics"><i class="fa fa-chart-pie"></i> Analytics</button>
+        </nav>
 
-    </main>
+        <div class="footer">
+          <div>
+            <div class="small">Signed in as</div>
+            <div id="sidebarUser" style="font-weight:700">—</div>
+          </div>
+
+          <div style="text-align:right">
+            <button class="btn ghost" id="themeToggle" title="Toggle theme"><i class="fa fa-moon"></i></button>
+          </div>
+        </div>
+      </aside>
+
+      <!-- MAIN AREA -->
+      <main class="main" role="main">
+        <!-- Top bar -->
+        <div class="topbar">
+          <div class="title-group">
+            <div>
+              <h1 class="title">Teacher Panel</h1>
+              <div class="subtitle" id="pageSubtitle">Welcome — loading…</div>
+            </div>
+          </div>
+
+          <div class="controls">
+            <select id="orgSwitcher" class="select" title="Switch organization"></select>
+            <select id="roleSwitcher" class="select" title="Switch role">
+              <option value="teacher">Teacher</option>
+              <option value="hr">HR</option>
+              <option value="finance">Finance (read)</option>
+            </select>
+            <button class="btn primary" id="composeBtn"><i class="fa fa-pen"></i> New Message</button>
+            <button class="btn" id="refreshBtn" title="Refresh"><i class="fa fa-rotate"></i></button>
+          </div>
+        </div>
+
+        <!-- KPI GRID -->
+        <div class="grid" id="kpiGrid" aria-hidden="false">
+          <div class="kpi">
+            <i class="fa fa-users"></i>
+            <div>
+              <div class="value" id="kpiPresent">0</div>
+              <div class="label">Present Today</div>
+            </div>
+          </div>
+
+          <div class="kpi">
+            <i class="fa fa-file-lines"></i>
+            <div>
+              <div class="value" id="kpiNotes">0</div>
+              <div class="label">Notes Submitted</div>
+            </div>
+          </div>
+
+          <div class="kpi">
+            <i class="fa fa-sack-dollar"></i>
+            <div>
+              <div class="value" id="kpiPayslips">0</div>
+              <div class="label">Payslips Available</div>
+            </div>
+          </div>
+
+          <div class="kpi">
+            <i class="fa fa-clock"></i>
+            <div>
+              <div class="value" id="kpiUpcoming">0</div>
+              <div class="label">Upcoming Classes</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CONTENT PANELS (placeholders - Parts 2+) -->
+        <section id="homeSection" class="card" aria-live="polite">
+          <div class="card-title">Dashboard</div>
+          <div class="tiny">Summary, quick links and recent activity will appear here.</div>
+          <div id="recentActivity" style="margin-top:12px;"></div>
+        </section>
+
+        <section id="attendanceSection" class="card" style="display:none">
+          <div class="card-title">Attendance</div>
+          <!-- Attendance UI will be inserted in Part 2 -->
+          <div id="attendanceModulePlaceholder" class="tiny">Attendance module (Part 2)</div>
+        </section>
+
+        <section id="notesSection" class="card" style="display:none">
+          <div class="card-title">Lesson Notes</div>
+          <div id="notesModulePlaceholder" class="tiny">Lesson notes module (Part 3)</div>
+        </section>
+
+        <section id="assessSection" class="card" style="display:none">
+          <div class="card-title">Assessments</div>
+          <div id="assessModulePlaceholder" class="tiny">Assessments module (Part 3)</div>
+        </section>
+
+        <section id="assignmentsSection" class="card" style="display:none">
+          <div class="card-title">Assignments</div>
+          <div id="assignmentsModulePlaceholder" class="tiny">Assignments module (Part 3)</div>
+        </section>
+
+        <section id="timetableSection" class="card" style="display:none">
+          <div class="card-title">Timetable</div>
+          <div id="timetableModulePlaceholder" class="tiny">Timetable module (Part 4)</div>
+        </section>
+
+        <section id="payrollSection" class="card" style="display:none">
+          <div class="card-title">Payroll & Payslips</div>
+          <div id="payrollModulePlaceholder" class="tiny">Payroll module (Part 4)</div>
+        </section>
+
+        <section id="requestsSection" class="card" style="display:none">
+          <div class="card-title">Requests</div>
+          <div id="requestsModulePlaceholder" class="tiny">Requests module (Part 4)</div>
+        </section>
+
+        <section id="messagesSection" class="card" style="display:none">
+          <div class="card-title">Messages</div>
+          <div id="messagesModulePlaceholder" class="tiny">Messaging module (Part 5)</div>
+        </section>
+
+        <section id="profileSection" class="card" style="display:none">
+          <div class="card-title">Profile</div>
+          <div id="profileModulePlaceholder" class="tiny">Profile module (Part 6)</div>
+        </section>
+
+        <section id="analyticsSection" class="card" style="display:none">
+          <div class="card-title">Analytics</div>
+          <div id="analyticsModulePlaceholder" class="tiny">Analytics module (Part 6)</div>
+        </section>
+
+        <!-- Toast -->
+        <div id="toast" role="status" aria-live="polite"></div>
+
+      </main>
+    </div><!-- /container -->
+  </div><!-- /app -->
+
+  <!-- Light JS controls for sidebar, theme, org, role (Part 1) -->
+  <script>
+    (function(){
+      // Utilities
+      function safeParse(s){ try { return JSON.parse(s); } catch(e){ return null; } }
+      function read(key){ return safeParse(localStorage.getItem(key)) || []; }
+      function save(key, val){ localStorage.setItem(key, JSON.stringify(val)); }
+      function uid(prefix='id'){ return prefix + '_' + Date.now().toString(36).toUpperCase(); }
+      function showToast(msg, ms=2400){
+        const t = document.getElementById('toast');
+        t.textContent = msg;
+        t.classList.add('show');
+        setTimeout(()=> t.classList.remove('show'), ms);
+      }
+
+      // Default orgs
+      const ORG_LIST_KEY = 'orgs_list_v2';
+      let orgs = read(ORG_LIST_KEY);
+      if(!orgs || !orgs.length){ orgs = ['FLAWLESS','FLAWLESS_JHS','FLAWLESS_SHS']; save(ORG_LIST_KEY, orgs); }
+
+      // Active org
+      const ACTIVE_ORG = localStorage.getItem('active_org') || orgs[0];
+      document.getElementById('orgLabel').textContent = ACTIVE_ORG;
+      const orgSwitcher = document.getElementById('orgSwitcher');
+      orgSwitcher.innerHTML = ''; orgs.forEach(o => {
+        const opt = document.createElement('option'); opt.value=o; opt.textContent=o;
+        if(o===ACTIVE_ORG) opt.selected = true;
+        orgSwitcher.appendChild(opt);
+      });
+      orgSwitcher.addEventListener('change', (e)=>{
+        localStorage.setItem('active_org', e.target.value);
+        showToast('Switched organization to ' + e.target.value);
+        setTimeout(()=> location.reload(), 600);
+      });
+
+      // Role switcher (simulate permission)
+      const roleSwitcher = document.getElementById('roleSwitcher');
+      const currentUser = safeParse(localStorage.getItem('teacher_current_user')) || { name: 'Ms Teacher', email:'teacher@flawless.local', role:'teacher' };
+      roleSwitcher.value = currentUser.role || 'teacher';
+      document.getElementById('sidebarUser').textContent = currentUser.name || currentUser.email;
+
+      roleSwitcher.addEventListener('change', (e)=>{
+        currentUser.role = e.target.value;
+        localStorage.setItem('teacher_current_user', JSON.stringify(currentUser));
+        showToast('Role: ' + e.target.value);
+        // role-based UI changes can be addressed in subsequent parts
+      });
+
+      // Theme toggle
+      const themeToggle = document.getElementById('themeToggle');
+      themeToggle.addEventListener('click', ()=>{
+        const isDark = document.documentElement.classList.toggle('dark');
+        localStorage.setItem('teacher_dark', isDark ? '1' : '0');
+        showToast(isDark ? 'Dark mode' : 'Light mode');
+      });
+      // apply persisted theme
+      if(localStorage.getItem('teacher_dark') === '1') document.documentElement.classList.add('dark');
+
+      // Sidebar navigation: show/hide sections
+      const navButtons = document.querySelectorAll('.nav button');
+      function showSection(name){
+        // clear actives
+        navButtons.forEach(b=> b.classList.toggle('active', b.dataset.section === name));
+        // hide all sections
+        const sections = {
+          home: 'homeSection',
+          attendance: 'attendanceSection',
+          notes: 'notesSection',
+          assess: 'assessSection',
+          assignments: 'assignmentsSection',
+          timetable: 'timetableSection',
+          payroll: 'payrollSection',
+          requests: 'requestsSection',
+          messages: 'messagesSection',
+          profile: 'profileSection',
+          analytics: 'analyticsSection'
+        };
+        Object.values(sections).forEach(id => { const el = document.getElementById(id); if(el) el.style.display = 'none'; });
+        // map button keys to section ids
+        const map = {
+          home:'homeSection', attendance:'attendanceSection', notes:'notesSection', assess:'assessSection',
+          assignments:'assignmentsSection', timetable:'timetableSection', payroll:'payrollSection',
+          requests:'requestsSection', messages:'messagesSection', profile:'profileSection', analytics:'analyticsSection'
+        };
+        const id = map[name] || 'homeSection';
+        const showEl = document.getElementById(id);
+        if(showEl) { showEl.style.display = 'block'; showEl.scrollIntoView({behavior:'smooth'}); }
+      }
+      navButtons.forEach(btn => {
+        btn.addEventListener('click', ()=> showSection(btn.dataset.section));
+      });
+
+      // Quick refresh button
+      document.getElementById('refreshBtn').addEventListener('click', ()=>{
+        showToast('Refreshing...');
+        // later parts will replace with full re-render hooks
+        setTimeout(()=> {
+          // placeholder refresh actions
+          document.getElementById('pageSubtitle').textContent = 'Last refreshed: ' + new Date().toLocaleTimeString();
+        }, 400);
+      });
+
+      // Compose button opens messages section
+      document.getElementById('composeBtn').addEventListener('click', ()=>{
+        showSection('messages');
+      });
+
+      // Fill some KPI placeholders from localStorage (light)
+      function updateKPIs(){
+        const att = read(ACTIVE_ORG + '_teacher_attendance') || [];
+        // present today (unique teachers with 'in' today)
+        const today = new Date().toISOString().split('T')[0];
+        const present = new Set(att.filter(a=> a.date && a.date.startsWith(today) && a.action === 'in').map(a=> a.employee || a.email || a.id));
+        document.getElementById('kpiPresent').textContent = present.size || 0;
+
+        const notes = read(ACTIVE_ORG + '_lesson_notes') || [];
+        document.getElementById('kpiNotes').textContent = notes.length || 0;
+
+        const pays = read(ACTIVE_ORG + '_finance_approved_batches') || [];
+        document.getElementById('kpiPayslips').textContent = pays.length || 0;
+
+        const tt = read(ACTIVE_ORG + '_timetable') || [];
+        // upcoming classes (naive: count entries that match today or future)
+        document.getElementById('kpiUpcoming').textContent = tt.length || 0;
+      }
+      // initial
+      document.getElementById('pageSubtitle').textContent = 'Organisation: ' + ACTIVE_ORG;
+      updateKPIs();
+
+      // small API for other dashboards to call (HR/Finance)
+      window.teacherAPI = {
+        pushAttendance: function(record){
+          // record: { employee, email, action:'in'|'out', date: ISO }
+          const key = (localStorage.getItem('active_org') || ACTIVE_ORG) + '_teacher_attendance';
+          const arr = safeParse(localStorage.getItem(key)) || [];
+          arr.push(Object.assign({}, record, { createdAt: new Date().toISOString() }));
+          localStorage.setItem(key, JSON.stringify(arr));
+          // trigger update
+          updateKPIs();
+        },
+        pushNote: function(note){
+          const key = (localStorage.getItem('active_org') || ACTIVE_ORG) + '_lesson_notes';
+          const arr = safeParse(localStorage.getItem(key)) || [];
+          arr.push(Object.assign({}, note, { createdAt: new Date().toISOString() }));
+          localStorage.setItem(key, JSON.stringify(arr));
+          updateKPIs();
+        }
+      };
+
+      // Expose small helpers for console debugging
+      window._teacher_debug = { showSection, updateKPIs, ACTIVE_ORG };
+    })();
+  </script>
+  
+  <!-- ===== PART 2 — ATTENDANCE MODULE ===== -->
+<section id="attendanceSection" class="card" style="display:none">
+  <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
+    <span>Attendance Manager</span>
+    <div style="display:flex;gap:8px;align-items:center">
+      <input id="attDate" type="date" class="select" />
+      <select id="attDept" class="select">
+        <option value="">All Departments</option>
+      </select>
+      <button class="btn" id="btnLoadAttendance">Load</button>
+      <button class="btn primary" id="btnMarkAllPresent">Mark All Present</button>
+    </div>
   </div>
 
+  <div style="margin-top:12px;display:flex;gap:12px;align-items:flex-start">
+    <div style="flex:1">
+      <div class="tiny">Quick mark: click IN / OUT per employee, or use bulk CSV import.</div>
+
+      <div style="margin-top:12px" class="table-wrap">
+        <table id="attendanceTable">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Name</th>
+              <th>Dept</th>
+              <th>Email</th>
+              <th>Status (today)</th>
+              <th>Last action</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div style="margin-top:12px;display:flex;gap:8px;align-items:center">
+        <label class="btn ghost" id="importCsvLabel"><i class="fa fa-file-csv"></i> Import CSV</label>
+        <input type="file" id="hiddenImportCsv" accept=".csv,text/csv" style="display:none">
+        <button class="btn" id="exportAttendanceCsv">Export CSV</button>
+        <button class="btn" id="syncTeacherClockins">Sync Teacher Clock-ins</button>
+      </div>
+    </div>
+
+    <div style="width:320px">
+      <div class="card" style="padding:12px;border-radius:10px">
+        <div class="card-title">Attendance Summary</div>
+        <div class="tiny" id="attSummary">Loading…</div>
+        <div style="height:12px"></div>
+        <div class="tiny">Recent events</div>
+        <div id="attActivity" class="tiny" style="margin-top:8px; max-height:220px; overflow:auto"></div>
+      </div>
+
+      <div style="height:12px"></div>
+
+      <div class="card" style="padding:12px;border-radius:10px">
+        <div class="card-title">Auto Alert / Reminder</div>
+        <div class="tiny">Enable automatic absence alert at 09:05</div>
+        <div style="margin-top:8px">
+          <label><input type="checkbox" id="enable0905" checked /> Send alert if missing at 09:05</label>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
 <script>
-  const ORG = PortalAPI.activeOrg();
-  document.getElementById('orgLabelT').textContent = ORG;
+/* PART 2 — Attendance module script (works with the Part1 file) */
+(function(){
+  const ORG = localStorage.getItem('active_org') || 'FLAWLESS';
+  const EMP_KEY = `${ORG}_employees`;
+  const ATT_KEY = `${ORG}_attendance`;            // HR-style attendance
+  const TEACH_KEY = `${ORG}_teacher_attendance`;  // teacher pages may push here (array)
+  const ACT_KEY = `${ORG}_attendance_activity`;
 
-  function show(section){
-    document.querySelectorAll('main .card, main section').forEach(e=> e.style.display='none');
-    if(section==='dashboard') document.getElementById('dashboard').style.display='block';
-    else document.getElementById(section).style.display='block';
+  // helpers
+  function safeParse(s){ try{ return JSON.parse(s) } catch(e){ return null } }
+  function read(key){ return safeParse(localStorage.getItem(key)) || [] }
+  function save(key,val){ localStorage.setItem(key, JSON.stringify(val)) }
+  function uid(prefix='id'){ return prefix + '_' + Date.now().toString(36) }
+  function toast(msg, ms=2400){
+    const el = document.getElementById('toast');
+    if(!el) return alert(msg);
+    el.textContent = msg;
+    el.classList.add('show');
+    setTimeout(()=> el.classList.remove('show'), ms);
   }
-  show('dashboard');
-
-  // attendance writer - teacher pages write to TEACH_ATT key
-  function clockIn(){
-    const user = JSON.parse(localStorage.getItem('hr_current_user')||'{}');
-    const rec = { email: (user.email||'teacher@local'), action:'in', date:new Date().toISOString() };
-    PortalAPI.push(PortalAPI.KEYS.TEACH_ATT(), rec);
-    renderAtt();
-    showToast('Clocked in');
-    window.dispatchEvent(new Event('storage'));
-  }
-  function clockOut(){
-    const user = JSON.parse(localStorage.getItem('hr_current_user')||'{}');
-    const rec = { email: (user.email||'teacher@local'), action:'out', date:new Date().toISOString() };
-    PortalAPI.push(PortalAPI.KEYS.TEACH_ATT(), rec);
-    renderAtt();
-    showToast('Clocked out');
-    window.dispatchEvent(new Event('storage'));
-  }
-  function renderAtt(){
-    const arr = PortalAPI.read(PortalAPI.KEYS.TEACH_ATT());
-    if(!arr.length) { document.getElementById('attLog').innerHTML='<div class="small">No attendance yet</div>'; return; }
-    document.getElementById('attLog').innerHTML = arr.slice().reverse().map(a=> `<div class="small">${a.email} • ${a.action} • ${new Date(a.date).toLocaleString()}</div>`).join('');
+  function pushActivity(text){
+    const arr = read(ACT_KEY);
+    arr.push({ id: uid('a'), text, time: new Date().toISOString() });
+    save(ACT_KEY, arr);
+    renderActivity();
   }
 
-  // simple payslips : teacher views approved payroll items for their name
-  function renderPayslips(){
-    const approved = PortalAPI.read(PortalAPI.KEYS.APPROVED());
-    const user = JSON.parse(localStorage.getItem('hr_current_user')||'{}');
-    const name = user.name || user.email;
-    const list = [];
-    approved.forEach(batch=>{
-      (batch.items||[]).forEach(it=>{
-        if((it.employee||'').toLowerCase().includes((name||'').toLowerCase()) || (user.email && (it.employee||'').toLowerCase().includes(user.email.toLowerCase())) ){
-          list.push({ batch: batch.batchId, period: batch.period, net: it.net });
-        }
-      });
+  // DOM
+  const attDate = document.getElementById('attDate');
+  const attDept = document.getElementById('attDept');
+  const attendanceTableBody = document.querySelector('#attendanceTable tbody');
+  const attSummary = document.getElementById('attSummary');
+  const attActivity = document.getElementById('attActivity');
+  const importCsvLabel = document.getElementById('importCsvLabel');
+  const hiddenImportCsv = document.getElementById('hiddenImportCsv');
+
+  // set default date to today
+  attDate.value = new Date().toISOString().split('T')[0];
+
+  // --- Employee list utilities ---
+  function getEmployees(){ return read(EMP_KEY) }
+  function ensureEmployeesSeed(){
+    if(getEmployees().length === 0){
+      const demo = [
+        { id: 'e_1', name: 'Adjei James', dept: 'Admin', email: 'james@school.com' },
+        { id: 'e_2', name: 'Ama Serwaa', dept: 'Teaching', email: 'ama@school.com' },
+        { id: 'e_3', name: 'Kofi Mensah', dept: 'Teaching', email: 'kofi@school.com' }
+      ];
+      save(EMP_KEY, demo);
+    }
+  }
+  ensureEmployeesSeed();
+
+  // populate dept select
+  function populateDepts(){
+    const depts = Array.from(new Set(getEmployees().map(e=> e.dept || 'General')));
+    attDept.innerHTML = '<option value="">All Departments</option>';
+    depts.forEach(d => {
+      const opt = document.createElement('option'); opt.value=d; opt.textContent=d; attDept.appendChild(opt);
     });
-    if(!list.length) document.getElementById('paysList').innerHTML = '<div class="small">No payslips yet</div>';
-    else document.getElementById('paysList').innerHTML = list.map(l=> `<div class="card"><strong>${l.batch}</strong> ${l.period} • Net ₵${l.net} <button class="btn" onclick="downloadMyPayslip('${l.batch}','${l.period}','${l.net}')">Download</button></div>`).join('');
   }
-  function downloadMyPayslip(batch, period, net){
-    PortalAPI.generatePayslipPdf({ employeeName: (JSON.parse(localStorage.getItem('hr_current_user')||'{}').name || 'Teacher'), period, gross: net, tax:0, deductions:0, net, notes: `Batch ${batch}` });
+  populateDepts();
+
+  // attendance storage is an array of { id, employeeId, action: 'in'|'out', date (iso), note }
+  function markAttendance(employeeId, action, optDate){
+    const arr = read(ATT_KEY);
+    const dt = (optDate || new Date().toISOString());
+    arr.push({ id: uid('att'), employeeId, action, date: dt, createdAt: new Date().toISOString() });
+    save(ATT_KEY, arr);
+    pushActivity(`Marked ${action.toUpperCase()} — ${employeeId}`);
+    renderAttendance();
+    renderActivity();
   }
 
-  // timetable + notes load
-  function renderTimetable(){
-    const tt = PortalAPI.read(PortalAPI.KEYS.TIMETABLE());
-    document.getElementById('tt').innerHTML = tt.length ? tt.map(t=> `<div>${t.day} • ${t.class} • ${t.time}</div>`).join('') : '<div class="small">No timetable</div>';
+  // get today's last action per employee
+  function lastActionFor(empId, forDate){
+    const all = read(ATT_KEY);
+    const day = (forDate || attDate.value).split('T')[0];
+    const filtered = all.filter(a => (a.employeeId === empId) && (a.date.startsWith(day)));
+    if(!filtered.length) return null;
+    // last one
+    const last = filtered.slice().sort((a,b)=> new Date(b.date) - new Date(a.date))[0];
+    return last;
   }
 
-  function showToast(m){ const t = document.querySelector('.toast') || createToast(); t.textContent = m; t.classList.add('show'); setTimeout(()=> t.classList.remove('show'), 2600); }
-  function createToast(){ const t = document.createElement('div'); t.className='toast'; document.body.appendChild(t); return t; }
+  // render attendance table
+  function renderAttendance(){
+    const employees = getEmployees();
+    const date = attDate.value;
+    const deptFilter = attDept.value;
+    attendanceTableBody.innerHTML = '';
+    let presentCount = 0;
+    employees.filter(e=> !deptFilter || (e.dept === deptFilter)).forEach((e, idx)=>{
+      const last = lastActionFor(e.id, date);
+      const status = last ? (last.action === 'in' ? 'IN' : 'OUT') : '—';
+      if(last && last.action === 'in') presentCount++;
+      const lastAt = last ? (new Date(last.date).toLocaleTimeString()) : '—';
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${idx+1}</td>
+        <td>${escapeHtml(e.name)}</td>
+        <td>${escapeHtml(e.dept||'')}</td>
+        <td>${escapeHtml(e.email||'')}</td>
+        <td>${status}</td>
+        <td>${lastAt}</td>
+        <td>
+          <button class="btn" onclick="window.__att_mark('${e.id}','in')">IN</button>
+          <button class="btn ghost" onclick="window.__att_mark('${e.id}','out')">OUT</button>
+        </td>`;
+      attendanceTableBody.appendChild(tr);
+    });
+    attSummary.innerHTML = `For ${date}: <strong>${presentCount}</strong> present • <strong>${employees.length - presentCount}</strong> absent`;
+    // update global KPI on page if available
+    const kpiEl = document.getElementById('kpiPresent');
+    if(kpiEl) kpiEl.textContent = presentCount;
+  }
 
-  // initial
-  renderAtt(); renderPayslips(); renderTimetable();
+  // activity render
+  function renderActivity(){
+    const arr = read(ACT_KEY).slice().reverse().slice(0,40);
+    attActivity.innerHTML = arr.map(a => `${new Date(a.time).toLocaleString()} • ${escapeHtml(a.text)}`).join('<br>') || '<div class="tiny">No activity</div>';
+  }
 
-  // re-render on storage changes
-  window.addEventListener('storage', ()=> { renderAtt(); renderPayslips(); renderTimetable(); });
+  // CSV export/import
+  function exportAttendanceCsv(){
+    const rows = read(ATT_KEY);
+    if(!rows.length) return toast('No attendance to export');
+    const keys = ['id','employeeId','action','date'];
+    const lines = [keys.join(',')];
+    rows.forEach(r => lines.push(keys.map(k=>`"${String(r[k]||'').replace(/"/g,'""')}"`).join(',')));
+    const blob = new Blob([lines.join('\n')], { type: 'text/csv' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${ORG}_attendance_${Date.now()}.csv`; a.click();
+    toast('Exported attendance CSV');
+  }
+
+  function parseCSV(text){
+    const lines = text.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
+    if(!lines.length) return [];
+    const headers = lines[0].split(',').map(h=> h.replace(/^"|"$/g,'').trim());
+    return lines.slice(1).map(l=>{
+      const matches = l.match(/(".*?"|[^",\s]+)(?=,|$)/g) || [];
+      const obj = {};
+      headers.forEach((h,i)=> obj[h] = (matches[i]||'').replace(/^"|"$/g,''));
+      return obj;
+    });
+  }
+
+  hiddenImportCsv.addEventListener('change', (e)=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    const r = new FileReader();
+    r.onload = ()=>{
+      try{
+        const rows = parseCSV(r.result);
+        rows.forEach(row => {
+          // expect fields: employeeId, action, date (ISO) or name/email to map
+          let empId = row.employeeId || row.id || null;
+          if(!empId && row.email){
+            const emp = getEmployees().find(x=> (x.email||'').toLowerCase() === row.email.toLowerCase());
+            empId = emp && emp.id;
+          }
+          if(!empId && row.name){
+            const emp = getEmployees().find(x=> (x.name||'').toLowerCase() === row.name.toLowerCase());
+            empId = emp && emp.id;
+          }
+          if(!empId) return; // skip unknown
+          const act = (row.action||'in').toLowerCase().startsWith('o') ? 'out' : 'in';
+          const dt = row.date ? new Date(row.date).toISOString() : new Date().toISOString();
+          const arr = read(ATT_KEY);
+          arr.push({ id: uid('att'), employeeId: empId, action: act, date: dt, imported: true });
+          save(ATT_KEY, arr);
+          pushActivity(`Imported attendance ${empId} ${act}`);
+        });
+        renderAttendance();
+        renderActivity();
+        toast('CSV imported');
+      }catch(err){
+        alert('Invalid CSV');
+      }
+    };
+    r.readAsText(file);
+    e.target.value = '';
+  });
+
+  // teacher clock-in sync: collate teacher-attendance push arrays into HR ATT_KEY
+  function syncTeacherClockins(){
+    const tArr = read(TEACH_KEY);
+    if(!tArr.length) return toast('No teacher clock-ins to sync');
+    const employees = getEmployees();
+    let count = 0;
+    tArr.forEach(rec => {
+      // rec may be { email, log:[{in:iso, out:iso}]} or { employee, action, date }
+      if(rec.log && Array.isArray(rec.log)){
+        // try to find employee by email
+        const email = (rec.email || '').toLowerCase();
+        const emp = employees.find(e => (e.email||'').toLowerCase() === email) || employees.find(e=> e.name && rec.email && e.name.toLowerCase() === rec.email.toLowerCase());
+        const empId = emp ? emp.id : null;
+        rec.log.forEach(l=>{
+          if(l.in){
+            if(empId) markAttendance(empId, 'in', l.in);
+            count++;
+          }
+          if(l.out){
+            if(empId) markAttendance(empId, 'out', l.out);
+            count++;
+          }
+        });
+      } else if(rec.employeeId || rec.email || rec.employee){
+        // single events
+        let empId = rec.employeeId || null;
+        if(!empId && rec.email){
+          const emp = employees.find(e=> (e.email||'').toLowerCase() === (rec.email||'').toLowerCase());
+          empId = emp && emp.id;
+        }
+        if(empId && rec.action && rec.date){
+          const arr = read(ATT_KEY);
+          arr.push({ id: uid('att'), employeeId: empId, action: rec.action, date: rec.date });
+          save(ATT_KEY, arr);
+          count++;
+        }
+      }
+    });
+    // clear teacher pushes after sync OR keep them — we'll leave them intact but log
+    pushActivity(`Synced ${count} teacher clock-in/out records`);
+    toast(`Synced ${count} records`);
+    renderAttendance(); renderActivity();
+  }
+
+  // auto-alert for 09:05
+  let alertShown = false;
+  function checkMorningAlert(){
+    if(!document.getElementById('enable0905').checked) return;
+    const now = new Date();
+    const minutes = now.getHours()*60 + now.getMinutes();
+    const threshold = 9*60 + 5;
+    if(minutes >= threshold && !alertShown){
+      const date = attDate.value;
+      const employees = getEmployees();
+      const present = new Set(read(ATT_KEY).filter(a=> a.date.startsWith(date) && a.action === 'in').map(a=> a.employeeId));
+      const missing = employees.filter(e=> !present.has(e.id));
+      if(missing.length){
+        toast(`Alert: ${missing.length} staff haven't clocked in by 09:05`);
+        pushActivity(`Alert: ${missing.length} staff missing at 09:05`);
+      }
+      alertShown = true;
+    }
+  }
+  // run check every minute
+  setInterval(checkMorningAlert, 60*1000);
+
+  // small helper used by buttons in table (exposes mark function globally)
+  window.__att_mark = function(employeeId, action){
+    markAttendance(employeeId, action);
+    toast(`${action.toUpperCase()} recorded`);
+  };
+
+  // attach UI events
+  document.getElementById('btnLoadAttendance').addEventListener('click', renderAttendance);
+  document.getElementById('btnMarkAllPresent').addEventListener('click', ()=>{
+    const employees = getEmployees();
+    const date = attDate.value;
+    employees.forEach(e => {
+      // mark only if no 'in' exists for today
+      const existing = read(ATT_KEY).find(a=> a.employeeId===e.id && a.date.startsWith(date) && a.action==='in');
+      if(!existing) markAttendance(e.id, 'in', new Date().toISOString());
+    });
+    toast('All marked present');
+    renderAttendance();
+  });
+
+  importCsvLabel.addEventListener('click', ()=> hiddenImportCsv.click());
+  document.getElementById('exportAttendanceCsv').addEventListener('click', exportAttendanceCsv);
+  document.getElementById('syncTeacherClockins').addEventListener('click', syncTeacherClockins);
+
+  // render initial
+  renderAttendance();
+  renderActivity();
+
+  // respond to storage updates (so HR/Finance and other tabs sync)
+  window.addEventListener('storage', (e)=>{
+    const keys = [ATT_KEY, TEACH_KEY, EMP_KEY, ACT_KEY];
+    if(keys.includes(e.key)){
+      setTimeout(()=> { renderAttendance(); renderActivity(); }, 80);
+    }
+  });
+
+  // utility safe escape (same as other parts)
+  function escapeHtml(s){ if(!s) return ''; return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+})();
 </script>
+<!-- ===== end PART 2 ===== -->
+<!-- ================================
+      PART 3 — CLASSROOM MODULE
+     Lesson Notes • Assessments • Timetable
+=================================== -->
+<section id="classroomSection" class="card" style="display:none;">
+
+  <div class="card-title">Classroom Manager</div>
+
+  <div style="display:flex; gap:18px; margin-bottom:18px;">
+    <button class="btn" onclick="__cls_tab('notes')">Lesson Notes</button>
+    <button class="btn" onclick="__cls_tab('assess')">Assessments</button>
+    <button class="btn" onclick="__cls_tab('timetable')">Timetable</button>
+  </div>
+
+  <!-- =============================
+        NOTES TAB
+  ============================== -->
+  <div id="notesTab" style="display:none;">
+    <div class="tiny">Teachers submit notes. HR sees and approves.</div>
+
+    <div style="margin-top:14px; display:flex; gap:14px;">
+      <div style="flex:1">
+        <div class="card-title small">Submitted Notes</div>
+        <div class="table-wrap">
+          <table id="notesTable">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Teacher</th>
+                <th>Subject</th>
+                <th>Week</th>
+                <th>Status</th>
+                <th>File</th>
+                <th>Approve</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div style="width:300px;">
+        <div class="card" style="padding:12px;">
+          <div class="card-title small">Upload Note (HR)</div>
+          <input id="noteTeacherName" class="input" placeholder="Teacher Name">
+          <input id="noteSubject" class="input" placeholder="Subject">
+          <input id="noteWeek" class="input" placeholder="Week/Term">
+          <textarea id="noteContent" class="input" placeholder="Paste lesson content or short notes"></textarea>
+          <button class="btn primary" onclick="__cls_addNote()">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- =============================
+        ASSESSMENT TAB
+  ============================== -->
+  <div id="assessTab" style="display:none;">
+    <div class="tiny">Mark exams, enter scores, export results.</div>
+
+    <div style="margin-top:14px; display:flex; gap:14px;">
+      <div style="flex:1;">
+        <div class="card-title small">Assessments</div>
+        <div class="table-wrap">
+          <table id="assessTable">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Student</th>
+                <th>Subject</th>
+                <th>Score</th>
+                <th>Grade</th>
+                <th>Term</th>
+                <th>Edit</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <button class="btn" id="exportAssessCsv">Export as CSV</button>
+      </div>
+
+      <div style="width:300px;">
+        <div class="card" style="padding:12px;">
+          <div class="card-title small">Add Assessment</div>
+          <input id="assessStudent" class="input" placeholder="Student Name">
+          <input id="assessSubject" class="input" placeholder="Subject">
+          <input id="assessScore" type="number" class="input" placeholder="Score (0–100)">
+          <input id="assessTerm" class="input" placeholder="Term (e.g., Term 1)">
+          <button class="btn primary" onclick="__cls_addAssess()">Save</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- =============================
+        TIMETABLE TAB
+  ============================== -->
+  <div id="timetableTab" style="display:none;">
+    <div class="tiny">Manage weekly timetable. Teachers see updates live.</div>
+
+    <div style="margin-top:14px; display:flex; gap:14px;">
+      <div style="flex:1;">
+        <div class="card-title small">Weekly Timetable</div>
+        <div class="table-wrap">
+          <table id="ttTable">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Day</th>
+                <th>Time</th>
+                <th>Subject</th>
+                <th>Teacher</th>
+                <th>Edit</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div style="width:300px;">
+        <div class="card" style="padding:12px;">
+          <div class="card-title small">Add Timetable Entry</div>
+          <select id="ttDay" class="input">
+            <option>Monday</option>
+            <option>Tuesday</option>
+            <option>Wednesday</option>
+            <option>Thursday</option>
+            <option>Friday</option>
+          </select>
+          <input id="ttTime" class="input" placeholder="8:00 AM - 9:00 AM">
+          <input id="ttSubject" class="input" placeholder="Subject">
+          <input id="ttTeacher" class="input" placeholder="Teacher Name">
+          <button class="btn primary" onclick="__cls_addTT()">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</section>
+
+
+<script>
+/* ==========================================================
+   PART 3 CLASSROOM MODULE SCRIPT
+=========================================================== */
+(function(){
+  const ORG = localStorage.getItem('active_org') || 'FLAWLESS';
+  const NOTES_KEY = `${ORG}_notes`;
+  const ASSESS_KEY = `${ORG}_assessments`;
+  const TT_KEY = `${ORG}_timetable`;
+
+  function read(k){ try{ return JSON.parse(localStorage.getItem(k)) || [] } catch(e){ return [] } }
+  function save(k,v){ localStorage.setItem(k, JSON.stringify(v)) }
+  function uid(x='id'){ return x + '_' + Date.now().toString(36) }
+  function escapeHtml(s){ if(!s) return ''; return String(s).replace(/[&<>"']/g, c=>({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c])); }
+  function toast(msg){ alert(msg) }
+
+  // TAB SWITCHING
+  window.__cls_tab = function(tab){
+    document.getElementById('notesTab').style.display = 'none';
+    document.getElementById('assessTab').style.display = 'none';
+    document.getElementById('timetableTab').style.display = 'none';
+
+    if(tab === 'notes') document.getElementById('notesTab').style.display = 'block';
+    if(tab === 'assess') document.getElementById('assessTab').style.display = 'block';
+    if(tab === 'timetable') document.getElementById('timetableTab').style.display = 'block';
+
+    renderNotes();
+    renderAssess();
+    renderTT();
+  }
+
+  // ==============
+  // NOTES
+  // ==============
+  function renderNotes(){
+    const tbody = document.querySelector('#notesTable tbody');
+    const notes = read(NOTES_KEY);
+    tbody.innerHTML = '';
+    notes.forEach((n, i)=>{
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${i+1}</td>
+        <td>${escapeHtml(n.teacher)}</td>
+        <td>${escapeHtml(n.subject)}</td>
+        <td>${escapeHtml(n.week)}</td>
+        <td>${n.approved ? 'Approved' : 'Pending'}</td>
+        <td><button class="btn" onclick="alert(${JSON.stringify(JSON.stringify(n.content))})">View</button></td>
+        <td>
+          <button class="btn primary" onclick="__cls_approveNote('${n.id}')">Approve</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  window.__cls_addNote = function(){
+    const t = document.getElementById('noteTeacherName').value.trim();
+    const s = document.getElementById('noteSubject').value.trim();
+    const w = document.getElementById('noteWeek').value.trim();
+    const c = document.getElementById('noteContent').value.trim();
+    if(!t || !s || !w || !c) return toast('Fill all fields');
+    const arr = read(NOTES_KEY);
+    arr.push({ id: uid('note'), teacher:t, subject:s, week:w, content:c, approved:false });
+    save(NOTES_KEY, arr);
+    toast('Note added');
+    renderNotes();
+  }
+
+  window.__cls_approveNote = function(id){
+    const arr = read(NOTES_KEY);
+    const item = arr.find(x=>x.id===id);
+    if(item){ item.approved = true; save(NOTES_KEY, arr); toast('Approved'); renderNotes(); }
+  }
+
+  // ==============
+  // ASSESSMENTS
+  // ==============
+  function grade(score){
+    score = Number(score);
+    if(score>=80) return 'A';
+    if(score>=70) return 'B';
+    if(score>=60) return 'C';
+    if(score>=50) return 'D';
+    return 'F';
+  }
+
+  function renderAssess(){
+    const tbody = document.querySelector('#assessTable tbody');
+    const arr = read(ASSESS_KEY);
+    tbody.innerHTML = '';
+    arr.forEach((a,i)=>{
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${i+1}</td>
+        <td>${escapeHtml(a.student)}</td>
+        <td>${escapeHtml(a.subject)}</td>
+        <td>${a.score}</td>
+        <td>${grade(a.score)}</td>
+        <td>${escapeHtml(a.term)}</td>
+        <td><button class="btn" onclick="__cls_editAssess('${a.id}')">Edit</button></td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  window.__cls_addAssess = function(){
+    const st = document.getElementById('assessStudent').value.trim();
+    const su = document.getElementById('assessSubject').value.trim();
+    const sc = document.getElementById('assessScore').value.trim();
+    const te = document.getElementById('assessTerm').value.trim();
+    if(!st || !su || !sc || !te) return toast('All fields required');
+    const arr = read(ASSESS_KEY);
+    arr.push({ id: uid('as'), student:st, subject:su, score:sc, term:te });
+    save(ASSESS_KEY, arr);
+    toast('Assessment saved');
+    renderAssess();
+  }
+
+  window.__cls_editAssess = function(id){
+    const arr = read(ASSESS_KEY);
+    const item = arr.find(x=>x.id===id);
+    if(!item) return;
+    const newScore = prompt('Enter new score', item.score);
+    if(newScore === null) return;
+    item.score = newScore;
+    save(ASSESS_KEY, arr);
+    toast('Updated');
+    renderAssess();
+  }
+
+  document.getElementById('exportAssessCsv').addEventListener('click', ()=>{
+    const arr = read(ASSESS_KEY);
+    if(!arr.length) return toast('No data to export');
+    let text = "student,subject,score,grade,term\n";
+    arr.forEach(a=>{
+      text += `"${a.student}","${a.subject}",${a.score},${grade(a.score)},"${a.term}"\n`;
+    });
+    const blob = new Blob([text], {type:'text/csv'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `${ORG}_assessments.csv`;
+    a.click();
+  });
+
+  // ==============
+  // TIMETABLE
+  // ==============
+  function renderTT(){
+    const tbody = document.querySelector('#ttTable tbody');
+    const arr = read(TT_KEY);
+    tbody.innerHTML = '';
+    arr.forEach((t,i)=>{
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${i+1}</td>
+        <td>${escapeHtml(t.day)}</td>
+        <td>${escapeHtml(t.time)}</td>
+        <td>${escapeHtml(t.subject)}</td>
+        <td>${escapeHtml(t.teacher)}</td>
+        <td><button class="btn" onclick="__cls_editTT('${t.id}')">Edit</button></td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  window.__cls_addTT = function(){
+    const d = document.getElementById('ttDay').value;
+    const tm = document.getElementById('ttTime').value.trim();
+    const su = document.getElementById('ttSubject').value.trim();
+    const tc = document.getElementById('ttTeacher').value.trim();
+    if(!d||!tm||!su||!tc) return toast('Fill all fields');
+    const arr = read(TT_KEY);
+    arr.push({ id: uid('tt'), day:d, time:tm, subject:su, teacher:tc });
+    save(TT_KEY, arr);
+    toast('Timetable added');
+    renderTT();
+  }
+
+  window.__cls_editTT = function(id){
+    const arr = read(TT_KEY);
+    const item = arr.find(t=>t.id===id);
+    if(!item) return;
+    const newTime = prompt('New time', item.time);
+    if(newTime === null) return;
+    item.time = newTime;
+    save(TT_KEY, arr);
+    toast('Updated');
+    renderTT();
+  }
+
+  // initial hidden load
+  renderNotes();
+  renderAssess();
+  renderTT();
+
+})();
+</script>
+
+<!-- END PART 3 -->
+<!-- ================================
+      PART 4 — TEACHER SYNC, ALERTS & REPORTS
+=================================== -->
+<section id="teacherSyncSection" class="card" style="display:none;">
+  <div class="card-title">Teacher Sync • Alerts • Reports</div>
+
+  <div style="display:flex; gap:18px; align-items:flex-start;">
+    <div style="flex:1;">
+      <div class="tiny">Incoming teacher clock-ins/notes/time-table are synced here. HR can view and generate reports.</div>
+
+      <div style="margin-top:12px" class="card">
+        <h4 class="small">Recent Teacher Activity</h4>
+        <div id="teacherActivity" class="tiny" style="white-space:pre-line; margin-top:8px;">Loading…</div>
+      </div>
+
+      <div style="margin-top:12px; display:flex; gap:8px;">
+        <button class="btn primary" id="generateMonthlyReport">Generate Monthly Report (PDF)</button>
+        <button class="btn" id="exportTeacherCsv">Export Teacher Data (CSV)</button>
+        <button class="btn" id="forceSyncBtn">Force Sync</button>
+      </div>
+
+      <div style="margin-top:12px" class="card">
+        <h4 class="small">Automated Alerts</h4>
+        <div id="alertsArea" class="tiny"></div>
+        <div style="margin-top:8px">
+          <label><input type="checkbox" id="enableAlerts"> Enable 09:05 attendance alert</label>
+        </div>
+      </div>
+    </div>
+
+    <div style="width:340px;">
+      <div class="card">
+        <h4 class="small">Teacher Attendance Stream</h4>
+        <div id="teacherStream" style="max-height:320px; overflow:auto; font-size:13px; margin-top:8px;">No records</div>
+      </div>
+
+      <div class="card" style="margin-top:12px;">
+        <h4 class="small">Last Sync</h4>
+        <div id="lastSync" class="tiny">—</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+/* ==========================================================
+   PART 4 — Teacher Sync, Alerts & Monthly Reports
+   - Keys used:
+     ORG_teacher_attendance         (array of teacher attendance events)
+     ORG_teacher_notes              (lesson notes)
+     ORG_timetable                  (timetable entries)
+     ORG_teacher_reports_generated  (report meta)
+   - Exposes window.teacherAPI for teacher pages to push data.
+=========================================================== */
+(function(){
+  const ORG = localStorage.getItem('active_org') || 'FLAWLESS';
+  const TEACH_KEY = `${ORG}_teacher_attendance`;
+  const NOTE_KEY = `${ORG}_teacher_notes`;
+  const TT_KEY = `${ORG}_timetable`;
+  const REPORT_KEY = `${ORG}_teacher_reports_generated`;
+  const AUDIT_KEY = `${ORG}_finance_audit` /* reuse audit */;
+  const ALERT_PREF = `${ORG}_alerts_enabled`;
+
+  // safe localStorage helpers
+  function read(k){ try{ return JSON.parse(localStorage.getItem(k)) || [] } catch(e){ return [] } }
+  function write(k,v){ localStorage.setItem(k, JSON.stringify(v)) }
+  function nowISO(){ return new Date().toISOString() }
+  function uid(pref='id'){ return pref + '_' + Date.now().toString(36) }
+  function showToast(msg){ const t=document.getElementById('toast'); if(t){ t.textContent = msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'), 2400) } else console.log(msg) }
+  function formatDT(iso){ try{ return new Date(iso).toLocaleString() }catch(e){ return iso } }
+
+  // ensure keys exist
+  if(!localStorage.getItem(TEACH_KEY)) write(TEACH_KEY, []);
+  if(!localStorage.getItem(NOTE_KEY)) write(NOTE_KEY, []);
+  if(!localStorage.getItem(TT_KEY)) write(TT_KEY, []);
+  if(!localStorage.getItem(REPORT_KEY)) write(REPORT_KEY, []);
+
+  // render teacher stream & activity
+  function renderTeacherStream(){
+    const arr = read(TEACH_KEY).slice().reverse();
+    const el = document.getElementById('teacherStream');
+    if(!el) return;
+    if(!arr.length){ el.textContent = 'No teacher attendance records'; return; }
+    el.innerHTML = arr.slice(0,50).map(a=>{
+      const who = a.email || a.teacher || a.name || 'T';
+      const act = a.action || (a.in && 'IN' ) || (a.out && 'OUT') || 'event';
+      const time = formatDT(a.date || a.createdAt || a.time || a.ts || nowISO());
+      return `<div style="padding:8px;border-bottom:1px solid rgba(0,0,0,0.04)"><strong>${who}</strong> • ${act} • <div class="tiny">${time}</div></div>`;
+    }).join('');
+  }
+
+  function renderTeacherActivity(){
+    const arr = read(TEACH_KEY).slice().reverse().slice(0,30);
+    const el = document.getElementById('teacherActivity');
+    if(!el) return;
+    if(!arr.length) return el.textContent = 'No activity yet';
+    el.textContent = arr.map(a=> `${a.email||a.teacher||a.name||'T'} — ${a.action|| (a.in? 'IN':'') || (a.out? 'OUT':'')} @ ${formatDT(a.date||a.createdAt||nowISO())}`).join('\\n');
+  }
+
+  function renderLastSync(){
+    const el = document.getElementById('lastSync');
+    if(!el) return;
+    const reports = read(REPORT_KEY);
+    if(!reports.length) return el.textContent = 'Never';
+    el.textContent = `Last report: ${formatDT(reports.slice().reverse()[0].generatedAt)}`;
+  }
+
+  // alerts: simple 09:05 check for missing clock-ins for teacher list
+  function checkMorningAttendance(){
+    try{
+      if(localStorage.getItem(ALERT_PREF) !== '1') return;
+      const tt = new Date();
+      const minutes = tt.getHours()*60 + tt.getMinutes();
+      const threshold = 9*60 + 5; // 09:05
+      // only run if past threshold
+      if(minutes < threshold) return;
+      // gather teachers known from attendance entries (or teacher_notes/tt)
+      const att = read(TEACH_KEY);
+      const known = Array.from(new Set(att.map(a=> (a.email||a.teacher||a.name||'').toLowerCase()).filter(Boolean)));
+      // fallback: derive from timetable teacher entries
+      if(!known.length){
+        const tts = read(TT_KEY);
+        tts.forEach(e=> { if(e.teacher) known.push((e.teacher||'').toLowerCase()); });
+      }
+      // find those with at least one IN today
+      const today = new Date().toISOString().split('T')[0];
+      const present = new Set(att.filter(a=> (a.date||a.createdAt||'').startsWith(today) && (a.action==='in' || a.in)).map(a=> (a.email||a.teacher||a.name||'').toLowerCase()));
+      const missing = known.filter(n=> !present.has(n));
+      const alertsEl = document.getElementById('alertsArea');
+      if(missing.length){
+        const msg = `${missing.length} teacher(s) haven't clocked in by 09:05: ${missing.slice(0,6).join(', ')}`;
+        if(alertsEl) alertsEl.textContent = msg;
+        pushAudit('System', 'Attendance alert', msg);
+        showToast(msg);
+      } else {
+        if(alertsEl) alertsEl.textContent = 'All teachers clocked in';
+      }
+    }catch(e){
+      console.error(e);
+    }
+  }
+
+  // schedule minute check
+  setInterval(checkMorningAttendance, 60*1000);
+
+  // manual force sync
+  document.getElementById('forceSyncBtn') && document.getElementById('forceSyncBtn').addEventListener('click', ()=>{
+    renderAll();
+    showToast('Sync forced');
+  });
+
+  // enable alert toggle
+  const enablePref = localStorage.getItem(ALERT_PREF) === '1';
+  const chk = document.getElementById('enableAlerts');
+  if(chk){
+    chk.checked = enablePref;
+    chk.addEventListener('change', (e)=> {
+      localStorage.setItem(ALERT_PREF, e.target.checked ? '1' : '0');
+      showToast('Alert preference saved');
+    });
+  }
+
+  // export teacher data CSV
+  document.getElementById('exportTeacherCsv') && document.getElementById('exportTeacherCsv').addEventListener('click', ()=>{
+    const att = read(TEACH_KEY);
+    if(!att.length) return showToast('No teacher data');
+    const keys = ['id','email','teacher','action','date','note'];
+    const lines = [keys.join(',')];
+    att.forEach(r=>{
+      const row = keys.map(k=> `"${String(r[k]||'').replace(/"/g,'""')}"` ).join(',');
+      lines.push(row);
+    });
+    const blob = new Blob([lines.join('\\n')], { type:'text/csv' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${ORG}_teacher_attendance_${Date.now()}.csv`; a.click();
+    showToast('Exported CSV');
+  });
+
+  // generate monthly report PDF (basic)
+  document.getElementById('generateMonthlyReport') && document.getElementById('generateMonthlyReport').addEventListener('click', ()=>{
+    const att = read(TEACH_KEY);
+    const notes = read(NOTE_KEY);
+    const tt = read(TT_KEY);
+    const month = new Date().toLocaleString(undefined, { month:'long', year:'numeric' });
+    if(!att.length && !notes.length && !tt.length) return showToast('No data to report');
+
+    // create a simple jsPDF report
+    if(!window.jspdf){ alert('jsPDF not loaded'); return; }
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('p','pt','a4');
+    doc.setFontSize(14); doc.text(`${ORG} — Teacher Monthly Report`, 40, 40);
+    doc.setFontSize(11); doc.text(`Month: ${month}`, 40, 60);
+    let y = 88;
+    doc.setFontSize(12); doc.text('Attendance (last 30):', 40, y); y+=16;
+    att.slice().reverse().slice(0,50).forEach((r,i)=>{
+      const line = `${i+1}. ${(r.email||r.teacher||r.name||'T')} • ${r.action||r.in||r.out || ''} • ${formatDT(r.date||r.createdAt||nowISO())}`;
+      doc.text(line, 48, y); y += 12;
+      if(y > 740){ doc.addPage(); y = 40; }
+    });
+    y += 6;
+    doc.setFontSize(12); doc.text('Timetable (sample):', 40, y); y += 16;
+    tt.slice(0,20).forEach((r,i)=>{
+      doc.text(`${r.day} ${r.time} — ${r.subject} • ${r.teacher}`, 48, y); y += 12;
+      if(y > 740){ doc.addPage(); y = 40; }
+    });
+    // save meta
+    const meta = read(REPORT_KEY);
+    meta.push({ id: uid('rep'), generatedAt: nowISO(), month, createdBy:'HR/Finance' });
+    write(REPORT_KEY, meta);
+    renderLastSync();
+    doc.save(`${ORG}_teacher_report_${month.replace(/\\s+/g,'_')}.pdf`);
+    showToast('Report generated');
+  });
+
+  // small audit push helper
+  function pushAudit(actor, action, payload=''){
+    const arr = read(AUDIT_KEY); arr.push({ id: uid('audit'), actor, action, payload, time: nowISO() }); write(AUDIT_KEY, arr); // keep audit consistent
+  }
+
+  // renderAll
+  function renderAll(){
+    renderTeacherStream();
+    renderTeacherActivity();
+    renderLastSync();
+    // populate alerts area at load
+    document.getElementById('alertsArea') && (document.getElementById('alertsArea').textContent = 'No alerts yet');
+  }
+
+  // listen to storage events (teacher pages will write into TEACH_KEY)
+  window.addEventListener('storage', (e)=>{
+    if([TEACH_KEY, NOTE_KEY, TT_KEY, REPORT_KEY, ALERT_PREF].includes(e.key)){
+      setTimeout(renderAll, 80);
+    }
+  });
+
+  // expose teacher API for other pages (teacher portal)
+  window.teacherAPI = {
+    pushAttendance(record){
+      // record: { email, teacher, action:'in'|'out', date: ISOstring, note? }
+      const arr = read(TEACH_KEY);
+      const rec = Object.assign({}, record, { createdAt: nowISO() });
+      arr.push(rec); write(TEACH_KEY, arr);
+      pushAudit(rec.email||rec.teacher||'teacher', 'Pushed attendance', JSON.stringify(rec));
+      renderAll();
+      return rec;
+    },
+    pushNote(note){
+      // note: { teacher, subject, week, content, createdAt? }
+      const arr = read(NOTE_KEY);
+      const rec = Object.assign({}, note, { id: uid('tnote'), createdAt: nowISO(), approved: false });
+      arr.push(rec); write(NOTE_KEY, arr);
+      pushAudit(rec.teacher||'teacher', 'Pushed note', rec.subject || '');
+      renderAll();
+      return rec;
+    },
+    pushTimetableEntry(entry){
+      // entry: { day, time, subject, teacher }
+      const arr = read(TT_KEY);
+      const rec = Object.assign({}, entry, { id: uid('tt'), createdAt: nowISO() });
+      arr.push(rec); write(TT_KEY, arr);
+      pushAudit('teacher', 'Pushed timetable', `${entry.day} ${entry.time}`);
+      renderAll();
+      return rec;
+    }
+  };
+
+  // initialise UI
+  renderAll();
+
+  // surface functions on window for manual testing
+  window.__teacher_renderAll = renderAll;
+  window.__teacher_checkMorning = checkMorningAttendance;
+
+})();
+</script>
+<!-- END PART 4 -->
+
 </body>
 </html>
