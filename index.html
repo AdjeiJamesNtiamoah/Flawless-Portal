@@ -1,0 +1,55 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Flawless Portal — Welcome</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="stylesheet" href="styles.css">
+  <script src="portal-api.js"></script>
+</head>
+<body>
+  <div style="max-width:940px;margin:40px auto;padding:20px;">
+    <div class="card">
+      <h1>FLAWLESS GRAPHICS — Portal</h1>
+      <p class="small">Employee & Classroom Management — Local demo</p>
+      <div style="display:flex;gap:12px;margin-top:12px">
+        <a class="btn primary" href="hr-dashboard.html">HR Dashboard</a>
+        <a class="btn primary" href="finance-dashboard.html">Finance Dashboard</a>
+        <a class="btn primary" href="teacher-dashboard.html">Teacher Dashboard</a>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:14px">
+      <h3>Quick Login</h3>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input id="email" class="input" placeholder="email">
+        <input id="password" type="password" class="input" placeholder="password">
+        <select id="role" class="input">
+          <option value="hr">HR</option>
+          <option value="finance">Finance</option>
+          <option value="teacher">Teacher</option>
+        </select>
+        <button id="loginBtn" class="btn primary">Login</button>
+      </div>
+      <div class="small" style="margin-top:8px">Default seeded users: hr@flawless.local/hrpass, finance@flawless.local/finpass, teacher@flawless.local/teachpass</div>
+    </div>
+  </div>
+
+<script>
+  // simple login that writes hr_current_user in localStorage
+  document.getElementById('loginBtn').addEventListener('click', ()=>{
+    const email = document.getElementById('email').value.trim();
+    const pass = document.getElementById('password').value;
+    const role = document.getElementById('role').value;
+    const users = PortalAPI.read ? PortalAPI.read(PortalAPI.KEYS.USERS()) : JSON.parse(localStorage.getItem(PortalAPI.KEYS.USERS())||'[]');
+    const found = (users || []).find(u=> u.email === email && u.password === pass && u.role === role);
+    if(!found){ alert('Login failed — check credentials and role'); return; }
+    localStorage.setItem('hr_current_user', JSON.stringify(found));
+    // redirect depending on role
+    if(role === 'hr') location.href = 'hr-dashboard.html';
+    else if(role === 'finance') location.href = 'finance-dashboard.html';
+    else location.href = 'teacher-dashboard.html';
+  });
+</script>
+</body>
+</html>
