@@ -1,0 +1,36 @@
+/* Shared styles for all dashboards */
+:root{
+  --bg:#f4f7fb;
+  --panel:#ffffff;
+  --accent:#00c3ff;
+  --accent2:#6b5fff;
+  --muted:#6b7280;
+  --text:#0b1b2e;
+  --radius:12px;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:Inter,system-ui,Arial;background:var(--bg);color:var(--text)}
+.app{display:flex;min-height:100vh}
+.sidebar{width:240px;background:linear-gradient(180deg,#06325a,#03203a);color:#fff;padding:18px;display:flex;flex-direction:column;gap:12px}
+.sidebar h2{margin:0;font-size:18px}
+.nav-item{padding:10px;border-radius:8px;cursor:pointer;color:rgba(255,255,255,0.92);font-weight:700}
+.nav-item:hover{background:rgba(255,255,255,0.04)}
+.content{flex:1;padding:20px;overflow:auto}
+.header{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+.top-links a{margin-right:12px;color:var(--muted);text-decoration:none}
+.card{background:var(--panel);padding:14px;border-radius:12px;box-shadow:0 6px 18px rgba(8,20,40,0.06);margin-bottom:14px}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:14px}
+.kpi{padding:12px;border-radius:10px;background:linear-gradient(180deg,#fff, #fbfdff);display:flex;gap:12px;align-items:center}
+.kpi i{font-size:26px;color:var(--accent)}
+.table-wrap{overflow:auto;border-radius:8px}
+table{width:100%;border-collapse:collapse}
+th,td{padding:10px;border-bottom:1px solid rgba(2,8,23,0.04);text-align:left}
+.btn{padding:8px 12px;border-radius:8px;border:0;cursor:pointer;font-weight:700}
+.btn.primary{background:linear-gradient(90deg,var(--accent),var(--accent2));color:#021}
+.btn.light{background:#eef6ff;color:#022}
+.small{font-size:13px;color:var(--muted)}
+.toast{position:fixed;right:18px;bottom:18px;padding:10px 14px;border-radius:10px;background:linear-gradient(90deg,var(--accent),var(--accent2));color:#021;display:none}
+.toast.show{display:block}
+.form-row{display:flex;gap:8px;align-items:center}
+.input{padding:8px;border-radius:8px;border:1px solid rgba(2,8,23,0.04)}
+.center{text-align:center}
