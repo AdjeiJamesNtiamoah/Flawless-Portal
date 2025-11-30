@@ -1,0 +1,125 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Teacher Dashboard — Flawless</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="stylesheet" href="styles.css">
+  <script src="portal-api.js"></script>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <h2>TEACHER</h2>
+      <div class="nav-item" onclick="location.href='index.html'">← Home</div>
+      <div class="nav-item active" onclick="show('dashboard')">Dashboard</div>
+      <div class="nav-item" onclick="show('attendance')">Attendance</div>
+      <div class="nav-item" onclick="show('timetable')">Timetable</div>
+      <div class="nav-item" onclick="show('payslips')">Payslips</div>
+    </aside>
+
+    <main class="content">
+      <div class="header">
+        <div><h2>Teacher Dashboard</h2><div class="small">Org: <span id="orgLabelT"></span></div></div>
+        <div class="top-links"><a href="hr-dashboard.html">HR</a> <a href="finance-dashboard.html">Finance</a></div>
+      </div>
+
+      <div id="dashboard" class="card">
+        <h3>Welcome</h3>
+        <div class="small">Quick actions below</div>
+      </div>
+
+      <section id="attendance" class="card" style="display:none">
+        <h3>Clock In / Out</h3>
+        <div style="display:flex;gap:8px">
+          <button class="btn" onclick="clockIn()">Clock In</button>
+          <button class="btn" onclick="clockOut()">Clock Out</button>
+        </div>
+        <div style="margin-top:12px" id="attLog"></div>
+      </section>
+
+      <section id="timetable" class="card" style="display:none">
+        <h3>Timetable</h3>
+        <div class="small">Teacher timetable synced from HR (demo)</div>
+        <div id="tt"></div>
+      </section>
+
+      <section id="payslips" class="card" style="display:none">
+        <h3>Your Payslips</h3>
+        <div id="paysList"></div>
+      </section>
+
+    </main>
+  </div>
+
+<script>
+  const ORG = PortalAPI.activeOrg();
+  document.getElementById('orgLabelT').textContent = ORG;
+
+  function show(section){
+    document.querySelectorAll('main .card, main section').forEach(e=> e.style.display='none');
+    if(section==='dashboard') document.getElementById('dashboard').style.display='block';
+    else document.getElementById(section).style.display='block';
+  }
+  show('dashboard');
+
+  // attendance writer - teacher pages write to TEACH_ATT key
+  function clockIn(){
+    const user = JSON.parse(localStorage.getItem('hr_current_user')||'{}');
+    const rec = { email: (user.email||'teacher@local'), action:'in', date:new Date().toISOString() };
+    PortalAPI.push(PortalAPI.KEYS.TEACH_ATT(), rec);
+    renderAtt();
+    showToast('Clocked in');
+    window.dispatchEvent(new Event('storage'));
+  }
+  function clockOut(){
+    const user = JSON.parse(localStorage.getItem('hr_current_user')||'{}');
+    const rec = { email: (user.email||'teacher@local'), action:'out', date:new Date().toISOString() };
+    PortalAPI.push(PortalAPI.KEYS.TEACH_ATT(), rec);
+    renderAtt();
+    showToast('Clocked out');
+    window.dispatchEvent(new Event('storage'));
+  }
+  function renderAtt(){
+    const arr = PortalAPI.read(PortalAPI.KEYS.TEACH_ATT());
+    if(!arr.length) { document.getElementById('attLog').innerHTML='<div class="small">No attendance yet</div>'; return; }
+    document.getElementById('attLog').innerHTML = arr.slice().reverse().map(a=> `<div class="small">${a.email} • ${a.action} • ${new Date(a.date).toLocaleString()}</div>`).join('');
+  }
+
+  // simple payslips : teacher views approved payroll items for their name
+  function renderPayslips(){
+    const approved = PortalAPI.read(PortalAPI.KEYS.APPROVED());
+    const user = JSON.parse(localStorage.getItem('hr_current_user')||'{}');
+    const name = user.name || user.email;
+    const list = [];
+    approved.forEach(batch=>{
+      (batch.items||[]).forEach(it=>{
+        if((it.employee||'').toLowerCase().includes((name||'').toLowerCase()) || (user.email && (it.employee||'').toLowerCase().includes(user.email.toLowerCase())) ){
+          list.push({ batch: batch.batchId, period: batch.period, net: it.net });
+        }
+      });
+    });
+    if(!list.length) document.getElementById('paysList').innerHTML = '<div class="small">No payslips yet</div>';
+    else document.getElementById('paysList').innerHTML = list.map(l=> `<div class="card"><strong>${l.batch}</strong> ${l.period} • Net ₵${l.net} <button class="btn" onclick="downloadMyPayslip('${l.batch}','${l.period}','${l.net}')">Download</button></div>`).join('');
+  }
+  function downloadMyPayslip(batch, period, net){
+    PortalAPI.generatePayslipPdf({ employeeName: (JSON.parse(localStorage.getItem('hr_current_user')||'{}').name || 'Teacher'), period, gross: net, tax:0, deductions:0, net, notes: `Batch ${batch}` });
+  }
+
+  // timetable + notes load
+  function renderTimetable(){
+    const tt = PortalAPI.read(PortalAPI.KEYS.TIMETABLE());
+    document.getElementById('tt').innerHTML = tt.length ? tt.map(t=> `<div>${t.day} • ${t.class} • ${t.time}</div>`).join('') : '<div class="small">No timetable</div>';
+  }
+
+  function showToast(m){ const t = document.querySelector('.toast') || createToast(); t.textContent = m; t.classList.add('show'); setTimeout(()=> t.classList.remove('show'), 2600); }
+  function createToast(){ const t = document.createElement('div'); t.className='toast'; document.body.appendChild(t); return t; }
+
+  // initial
+  renderAtt(); renderPayslips(); renderTimetable();
+
+  // re-render on storage changes
+  window.addEventListener('storage', ()=> { renderAtt(); renderPayslips(); renderTimetable(); });
+</script>
+</body>
+</html>
