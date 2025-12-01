@@ -569,7 +569,7 @@
 </section>
 
 <script>
-/* PART 2 — Attendance module script (works with the Part1 file) */
+
 (function(){
   const ORG = localStorage.getItem('active_org') || 'FLAWLESS';
   const EMP_KEY = `${ORG}_employees`;
@@ -859,11 +859,7 @@
 
 })();
 </script>
-<!-- ===== end PART 2 ===== -->
-<!-- ================================
-      PART 3 — CLASSROOM MODULE
-     Lesson Notes • Assessments • Timetable
-=================================== -->
+
 <section id="classroomSection" class="card" style="display:none;">
 
   <div class="card-title">Classroom Manager</div>
@@ -1006,9 +1002,7 @@
 
 
 <script>
-/* ==========================================================
-   PART 3 CLASSROOM MODULE SCRIPT
-=========================================================== */
+
 (function(){
   const ORG = localStorage.getItem('active_org') || 'FLAWLESS';
   const NOTES_KEY = `${ORG}_notes`;
@@ -1203,10 +1197,7 @@
 })();
 </script>
 
-<!-- END PART 3 -->
-<!-- ================================
-      PART 4 — TEACHER SYNC, ALERTS & REPORTS
-=================================== -->
+
 <section id="teacherSyncSection" class="card" style="display:none;">
   <div class="card-title">Teacher Sync • Alerts • Reports</div>
 
@@ -1249,15 +1240,7 @@
 </section>
 
 <script>
-/* ==========================================================
-   PART 4 — Teacher Sync, Alerts & Monthly Reports
-   - Keys used:
-     ORG_teacher_attendance         (array of teacher attendance events)
-     ORG_teacher_notes              (lesson notes)
-     ORG_timetable                  (timetable entries)
-     ORG_teacher_reports_generated  (report meta)
-   - Exposes window.teacherAPI for teacher pages to push data.
-=========================================================== */
+
 (function(){
   const ORG = localStorage.getItem('active_org') || 'FLAWLESS';
   const TEACH_KEY = `${ORG}_teacher_attendance`;
@@ -1478,10 +1461,7 @@
 
 })();
 </script>
-<!-- END PART 4 -->
-<!-- ==============================
-     PART 5 — PAYROLL SLIPS (PDF)
-     ============================== -->
+
 <section id="payrollSlipsSection" class="card" style="display:none;">
   <div class="card-title">Payroll Slips • PDF Generator</div>
 
@@ -1525,12 +1505,7 @@
 </section>
 
 <script>
-/* PART 5 — Payroll slips generator
-   Keys:
-     <ORG>_finance_approved_batches    (existing approved batches)
-     <ORG>_payroll_slips               (array of generated slip metadata)
-     Template stored at <ORG>_slip_template
-*/
+
 (function(){
   const ORG = localStorage.getItem('active_org') || 'FLAWLESS';
   const APPROVED_KEY = `${ORG}_finance_approved_batches`;
@@ -1825,7 +1800,6 @@
 
 })();
 </script>
-<!-- END PART 5 -->
 
 </body>
 </html>
