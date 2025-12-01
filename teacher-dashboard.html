@@ -1800,6 +1800,106 @@
 
 })();
 </script>
+<script>
+// --- SELECTORS ---
+const menuLinks = document.querySelectorAll(".menu-link");
+const contentBox = document.getElementById("content-area");
+
+// --- MODULE TEMPLATES (pages inside JS) ---
+
+const pages = {
+    dashboard: `
+        <h2 class="page-title">Dashboard</h2>
+        <p>Summary, quick links and recent activity will appear here.</p>
+    `,
+    
+    attendance: `
+        <h2 class="page-title">Attendance</h2>
+        <button onclick="markAttendance()" class="btn">Mark Attendance</button>
+        <div id="attendance-log"></div>
+    `,
+
+    notes: `
+        <h2 class="page-title">Lesson Notes</h2>
+        <textarea id="noteText" placeholder="Write your note..."></textarea>
+        <button onclick="saveNote()" class="btn">Save Note</button>
+        <div id="savedNotes"></div>
+    `,
+
+    assessments: `
+        <h2 class="page-title">Assessments</h2>
+        <p>Upload or manage assessments here.</p>
+    `,
+
+    assignments: `
+        <h2 class="page-title">Assignments</h2>
+        <p>Create, send and grade assignments.</p>
+    `,
+
+    timetable: `
+        <h2 class="page-title">Timetable</h2>
+        <p>Your weekly class timetable appears here.</p>
+    `,
+
+    payroll: `
+        <h2 class="page-title">Payroll & Payslips</h2>
+        <p>Your payslips will appear here.</p>
+    `,
+
+    requests: `
+        <h2 class="page-title">Requests</h2>
+        <p>Submit leave or special requests.</p>
+    `,
+
+    messages: `
+        <h2 class="page-title">Messages</h2>
+        <p>Send and receive messages.</p>
+    `,
+
+    profile: `
+        <h2 class="page-title">Profile</h2>
+        <p>Manage your profile information.</p>
+    `,
+
+    analytics: `
+        <h2 class="page-title">Analytics</h2>
+        <p>Performance and teaching statistics.</p>
+    `
+};
+
+// --- MENU CLICK HANDLER ---
+menuLinks.forEach(link => {
+    link.addEventListener("click", function () {
+        const page = this.getAttribute("data-page");
+
+        // load page
+        contentBox.innerHTML = pages[page] || "<p>Page not found.</p>";
+
+        // highlight active
+        document.querySelector(".active")?.classList.remove("active");
+        this.classList.add("active");
+    });
+});
+
+// DEFAULT PAGE
+contentBox.innerHTML = pages.dashboard;
+
+// --- FUNCTIONS FOR PAGES ---
+function markAttendance() {
+    const log = document.getElementById("attendance-log");
+    const time = new Date().toLocaleString();
+    log.innerHTML += `<p>✔ Marked present at: ${time}</p>`;
+}
+
+function saveNote() {
+    let text = document.getElementById("noteText").value;
+    if (!text) return alert("Write a note first");
+
+    let box = document.getElementById("savedNotes");
+    box.innerHTML += `<div class='note-card'>${text}</div>`;
+    document.getElementById("noteText").value = "";
+}
+</script>
 
 </body>
 </html>
