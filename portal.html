@@ -1,0 +1,843 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>FLAWLESS — Unified Portal (HR · Finance · Teacher)</title>
+
+<!-- Font Awesome -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+<!-- jsPDF -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<style>
+  :root{
+    --bg:#071227; --panel:#0f1724; --muted:#9fb4c9; --accent:#00c3ff; --accent2:#7a00ff;
+    --success:#10b981; --danger:#ef4444; --glass: rgba(255,255,255,0.03);
+    --radius:12px; --card:#0b1724; --text:#e8f6ff;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Inter,system-ui,Arial;background:linear-gradient(180deg,#061025 0%,#071227 100%);color:var(--text);min-height:100vh}
+  .app{display:flex;gap:18px;padding:18px;align-items:flex-start}
+  aside.sidebar{width:260px;background:linear-gradient(180deg,#051125,#08203a);padding:18px;border-radius:12px;min-height:calc(100vh-36px)}
+  .logo{display:flex;gap:12px;align-items:center;margin-bottom:12px}
+  .logo .badge{width:44px;height:44;border-radius:10px;background:linear-gradient(90deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;color:#021;font-weight:800}
+  .nav{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+  .nav button{background:transparent;border:0;color:var(--muted);text-align:left;padding:10px;border-radius:8px;cursor:pointer;font-weight:700;display:flex;gap:10px;align-items:center}
+  .nav button.active{background:linear-gradient(90deg,var(--accent),var(--accent2));color:#021}
+  main{flex:1;max-width:1200px}
+  .top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px}
+  .controls{display:flex;gap:8px;align-items:center}
+  select,input,textarea{padding:8px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:var(--text)}
+  .btn{padding:8px 12px;border-radius:8px;border:0;cursor:pointer;font-weight:800}
+  .btn.primary{background:linear-gradient(90deg,var(--accent),var(--accent2));color:#021}
+  .btn.ghost{background:transparent;border:1px solid rgba(255,255,255,0.04);color:var(--text)}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:12px}
+  .kpi{background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent); padding:14px;border-radius:10px;border:1px solid rgba(255,255,255,0.02)}
+  .kpi h4{margin:0;color:var(--muted);font-size:13px}
+  .kpi .big{font-size:20px;font-weight:800}
+  .card{background:linear-gradient(180deg,var(--card), rgba(255,255,255,0.01));padding:14px;border-radius:12px;border:1px solid rgba(255,255,255,0.03);margin-bottom:12px}
+  table{width:100%;border-collapse:collapse}
+  th,td{padding:10px;border-bottom:1px solid rgba(255,255,255,0.03);font-size:14px;color:var(--text)}
+  .small{font-size:13px;color:var(--muted)}
+  #toast{position:fixed;right:20px;bottom:20px;background:linear-gradient(90deg,var(--accent),var(--accent2));color:#021;padding:10px 14px;border-radius:10px;font-weight:800;opacity:0;transform:translateY(12px);transition:all .25s}
+  #toast.show{opacity:1;transform:none}
+  .hidden{display:none}
+  .form-row{display:flex;gap:8px}
+  .mt8{margin-top:8px}
+  .status-pill{padding:6px 10px;border-radius:999px;font-weight:700}
+  .status-pending{background:#f59e0b;color:#061024}
+  .status-approved{background:var(--success);color:#021}
+  .status-paid{background:linear-gradient(90deg,#0ee6a8,#10b981);color:#021}
+  .status-rejected{background:var(--danger);color:#fff}
+  .accounts-list p{margin:6px 0;padding:8px;border-radius:8px;background:rgba(255,255,255,0.02)}
+  .right{margin-left:auto}
+  .code{font-family:monospace;background:rgba(255,255,255,0.02);padding:6px;border-radius:6px}
+  @media(max-width:980px){ .app{flex-direction:column;padding:12px} aside.sidebar{width:100%;border-radius:10px} main{max-width:100%} }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="badge">FG</div>
+      <div>
+        <div style="font-weight:800">FLAWLESS</div>
+        <div class="small">Unified Portal</div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:8px;margin-bottom:8px">
+      <select id="orgSelect"></select>
+      <select id="roleSelect">
+        <option value="hr">HR</option>
+        <option value="finance">Finance</option>
+        <option value="teacher">Teacher</option>
+      </select>
+    </div>
+
+    <div style="display:flex;gap:8px;margin-bottom:10px">
+      <input id="passwordInput" placeholder="password" type="password" style="flex:1"/>
+      <button class="btn primary" id="loginBtn">Login</button>
+    </div>
+
+    <nav class="nav" id="mainNav">
+      <button data-section="dashboard" class="active"><i class="fa fa-home"></i> Dashboard</button>
+      <button data-section="employees"><i class="fa fa-users"></i> Employees</button>
+      <button data-section="attendance"><i class="fa fa-calendar-check"></i> Attendance</button>
+      <button data-section="payroll"><i class="fa fa-sack-dollar"></i> Payroll</button>
+      <button data-section="finance"><i class="fa fa-coins"></i> Finance</button>
+      <button data-section="teacher"><i class="fa fa-chalkboard-teacher"></i> Teacher</button>
+      <button data-section="messages"><i class="fa fa-envelope"></i> Messages</button>
+      <button data-section="audit"><i class="fa fa-history"></i> Audit Trail</button>
+      <button onclick="signOut()" style="margin-top:8px;color:var(--muted);background:transparent;border:0;text-align:left">Sign out</button>
+    </nav>
+
+    <div style="margin-top:auto" class="small">
+      <div>Tip: Open multiple tabs to test sync via <span class="code">localStorage</span>.</div>
+    </div>
+  </aside>
+
+  <main>
+    <div class="top">
+      <div>
+        <h2 id="title">Dashboard</h2>
+        <div class="small" id="subtitle">Role: <span id="currentRole">none</span> • Org: <span id="currentOrg">-</span></div>
+      </div>
+      <div class="controls">
+        <button class="btn ghost" id="seedBtn">Seed Demo</button>
+        <button class="btn ghost" id="exportAllBtn">Export JSON</button>
+        <button class="btn primary" id="refreshBtn">Refresh</button>
+      </div>
+    </div>
+
+    <!-- DASHBOARD KPIS -->
+    <div id="dashboardView">
+      <div class="grid">
+        <div class="kpi"><h4>Pending Payroll</h4><div class="big" id="kpiPending">0</div></div>
+        <div class="kpi"><h4>Approved (month)</h4><div class="big" id="kpiApproved">0</div></div>
+        <div class="kpi"><h4>Payslips</h4><div class="big" id="kpiPayslips">0</div></div>
+        <div class="kpi"><h4>Teachers Present</h4><div class="big" id="kpiTeachers">0</div></div>
+      </div>
+      <div class="card">
+        <h3>Overview</h3>
+        <p class="small">Use the left navigation to switch between HR, Finance and Teacher features. Role affects available actions.</p>
+      </div>
+    </div>
+
+    <!-- EMPLOYEES VIEW -->
+    <section id="employeesView" class="hidden">
+      <div class="card">
+        <div style="display:flex;align-items:center;gap:8px">
+          <h3 style="margin:0">Employees</h3>
+          <button class="btn primary right" id="addEmployeeBtn">+ Add Employee</button>
+        </div>
+        <div style="margin-top:10px" class="table-wrap">
+          <table>
+            <thead><tr><th>Name</th><th>Role</th><th>Email</th><th>Salary</th><th>Actions</th></tr></thead>
+            <tbody id="employeesTable"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ATTENDANCE VIEW -->
+    <section id="attendanceView" class="hidden">
+      <div class="card">
+        <h3>Attendance (Teacher)</h3>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input id="attTeacherEmail" placeholder="Teacher email (for teacher UI)" />
+          <button class="btn primary" id="attInBtn">Clock In</button>
+          <button class="btn ghost" id="attOutBtn">Clock Out</button>
+        </div>
+        <div id="attendanceLog" class="mt8 small"></div>
+      </div>
+    </section>
+
+    <!-- PAYROLL VIEW (HR) -->
+    <section id="payrollView" class="hidden">
+      <div class="card">
+        <h3>Payroll — HR</h3>
+        <div class="small">Prepare salary batches, add bonuses/deductions, then <strong>Send to Finance</strong>.</div>
+
+        <div style="margin-top:8px;display:grid;grid-template-columns:1fr 300px;gap:12px">
+          <div>
+            <div style="display:flex;gap:8px;align-items:center;margin-top:8px">
+              <select id="paySelectEmployee" style="flex:1"></select>
+              <input id="payBonus" placeholder="Bonus" style="width:90px"/>
+              <input id="payDeduct" placeholder="Deduction" style="width:90px"/>
+              <button class="btn primary" id="calcPayBtn">Add to Batch</button>
+            </div>
+
+            <div style="margin-top:12px">
+              <h4>Batch Items</h4>
+              <table>
+                <thead><tr><th>#</th><th>Employee</th><th>Gross</th><th>Net</th><th>Action</th></tr></thead>
+                <tbody id="batchItems"></tbody>
+              </table>
+              <div style="margin-top:8px;display:flex;gap:8px">
+                <input id="batchPeriod" placeholder="Period (e.g. 2025-11)" />
+                <button class="btn primary" id="sendToFinanceBtn">Send to Finance</button>
+                <button class="btn ghost" id="clearBatchBtn">Clear</button>
+              </div>
+            </div>
+          </div>
+
+          <div style="background:rgba(255,255,255,0.02);padding:10px;border-radius:8px">
+            <h4>Selected Item</h4>
+            <div id="selectedItem" class="small">Choose employee + compute</div>
+            <div style="margin-top:12px">
+              <h4>Saved Batches</h4>
+              <div id="savedBatches" class="small"></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- FINANCE VIEW -->
+    <section id="financeView" class="hidden">
+      <div class="card">
+        <h3>Finance — Pending Payroll</h3>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="btn primary" id="approveAllBtn">Approve All</button>
+          <button class="btn ghost" id="refreshPendingBtn">Refresh</button>
+        </div>
+
+        <div style="margin-top:12px" class="table-wrap">
+          <table>
+            <thead><tr><th>#</th><th>Batch ID</th><th>Submitted By</th><th>Period</th><th>Total</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody id="pendingTable"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card mt8">
+        <h3>Linked Payment Accounts</h3>
+        <div class="accounts-list" id="linkedAccountsList"></div>
+        <div style="margin-top:8px;display:flex;gap:6px;align-items:center">
+          <select id="accType"><option value="momo">Mobile Money</option><option value="bank">Bank</option><option value="wallet">Wallet</option></select>
+          <input id="accName" placeholder="Name"/>
+          <input id="accNumber" placeholder="Number/IBAN"/>
+          <button class="btn primary" id="addAccBtn">Add</button>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- TEACHER VIEW -->
+    <section id="teacherView" class="hidden">
+      <div class="card">
+        <h3>Teacher Panel</h3>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input id="tName" placeholder="Your name/email" />
+          <select id="tOrg"></select>
+          <button class="btn primary" id="tLoginBtn">Use Teacher Mode</button>
+        </div>
+
+        <div style="margin-top:12px;display:grid;grid-template-columns:1fr 320px;gap:12px">
+          <div>
+            <h4>Lesson Notes</h4>
+            <textarea id="noteBody" rows="6" style="width:100%;"></textarea>
+            <div style="margin-top:8px">
+              <button class="btn primary" id="postNoteBtn">Post Note</button>
+              <button class="btn ghost" id="syncToHRBtn">Push Attendance (sync)</button>
+            </div>
+            <h4 class="mt8">Timetable</h4>
+            <textarea id="timetableBody" rows="4" style="width:100%"></textarea>
+            <div style="margin-top:8px"><button class="btn primary" id="saveTimetableBtn">Save Timetable</button></div>
+          </div>
+
+          <div style="background:rgba(255,255,255,0.02);padding:10px;border-radius:8px">
+            <h4>Recent Notes</h4>
+            <div id="notesList" class="small"></div>
+            <h4 class="mt8">Attendance (latest)</h4>
+            <div id="teacherAttendanceWidget" class="small"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- MESSAGES -->
+    <section id="messagesView" class="hidden">
+      <div class="card">
+        <h3>Messages (Finance ↔ HR)</h3>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input id="msgTo" placeholder="To"/>
+          <input id="msgSub" placeholder="Subject" style="width:240px"/>
+        </div>
+        <textarea id="msgBody" rows="4" style="width:100%;margin-top:8px"></textarea>
+        <div style="margin-top:8px"><button class="btn primary" id="sendMsg">Send</button></div>
+        <div style="margin-top:12px"><h4>Inbox</h4><div id="msgInbox" class="small"></div></div>
+      </div>
+    </section>
+
+    <!-- AUDIT -->
+    <section id="auditView" class="hidden">
+      <div class="card">
+        <h3>Audit Trail</h3>
+        <div id="auditLog" class="small"></div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<div id="toast">Saved</div>
+
+<script>
+/* =========================
+   Utilities & Namespaced Keys
+   ========================= */
+function safeParse(s){try{return JSON.parse(s)}catch(e){return null}}
+function read(k){return safeParse(localStorage.getItem(k))||[]}
+function save(k,v){localStorage.setItem(k, JSON.stringify(v))}
+function uid(p='id'){return p+'_'+Date.now().toString(36)}
+function showToast(msg, ms=2200){const t=document.getElementById('toast');t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'), ms);}
+
+/* ORG/ROLE/USER */
+const ORG_LIST_KEY = 'fg_orgs';
+const DEFAULT_ORGS = ['FLAWLESS','FLAWLESS_JHS','FLAWLESS_SHS'];
+if(!localStorage.getItem(ORG_LIST_KEY)) save(ORG_LIST_KEY, DEFAULT_ORGS);
+const orgSelect = document.getElementById('orgSelect');
+const tOrg = document.getElementById('tOrg');
+function populateOrgs(){
+  const orgs = read(ORG_LIST_KEY);
+  orgSelect.innerHTML=''; tOrg.innerHTML='';
+  orgs.forEach(o=>{ const opt=document.createElement('option'); opt.value=o; opt.textContent=o; orgSelect.appendChild(opt); const opt2=opt.cloneNode(true); tOrg.appendChild(opt2); });
+}
+populateOrgs();
+
+let currentOrg = localStorage.getItem('active_org') || DEFAULT_ORGS[0];
+orgSelect.value = currentOrg;
+document.getElementById('currentOrg').textContent = currentOrg;
+
+/* keys */
+function K(s){ return `${currentOrg}_${s}` } // namespacing util
+const HR_PAYROLL_KEY = ()=>'hr_payroll_batches'; // used with K(...)
+const FIN_APPROVED = ()=> 'finance_approved_batches';
+const FIN_MSG = ()=> 'finance_messages';
+const FIN_AUDIT = ()=> 'finance_audit';
+const TEACH_ATT = ()=> 'teacher_attendance';
+const TEACH_TT = ()=> 'teacher_timetable';
+const TEACH_NOTES = ()=> 'teacher_notes';
+const EMP_KEY = ()=> 'employees';
+const SALARY_SHEETS = ()=> 'salary_sheets';
+const PAYMENT_ACCOUNTS = ()=> 'payment_accounts';
+const PAYMENTS_LOG = ()=> 'payments_log';
+
+/* authentication (very simple) */
+const PASSWORD_STORE = 'portal_passwords'; // {role:password}
+if(!localStorage.getItem(PASSWORD_STORE)) save(PASSWORD_STORE, { hr:'hr123', finance:'fin123', teacher:'teach123' });
+
+/* helpers: get/set namespaced */
+function nsRead(keyFn){ return read(K(keyFn())) }
+function nsSave(keyFn, val){ save(K(keyFn()), val) }
+
+/* =================================
+   UI wiring & nav
+   ================================= */
+const navButtons = document.querySelectorAll('.nav button[data-section]');
+navButtons.forEach(b=>b.addEventListener('click', ()=> {
+  navButtons.forEach(x=>x.classList.remove('active'));
+  b.classList.add('active');
+  const s = b.dataset.section;
+  document.getElementById('title').textContent = b.textContent.trim();
+  showSection(s);
+}));
+
+function showSection(s){
+  document.querySelectorAll('main section, #dashboardView').forEach(el=> el.classList.add('hidden'));
+  if(s==='dashboard'){ document.getElementById('dashboardView').classList.remove('hidden'); }
+  else document.getElementById(s+'View').classList.remove('hidden');
+}
+
+/* role/org login */
+const roleSelect = document.getElementById('roleSelect');
+const loginBtn = document.getElementById('loginBtn');
+loginBtn.addEventListener('click', ()=> {
+  const pw = document.getElementById('passwordInput').value || '';
+  const passwords = read(PASSWORD_STORE);
+  const role = roleSelect.value;
+  if(passwords[role] && pw === passwords[role]){
+    localStorage.setItem('current_role', role);
+    localStorage.setItem('active_org', orgSelect.value);
+    currentOrg = orgSelect.value;
+    document.getElementById('currentRole').textContent = role;
+    document.getElementById('currentOrg').textContent = currentOrg;
+    showToast('Logged in as '+role);
+    renderAll();
+  } else {
+    alert('Invalid password for role: '+role);
+  }
+});
+function signOut(){ localStorage.removeItem('current_role'); document.getElementById('currentRole').textContent='none'; showToast('Signed out'); }
+
+/* change org selector updates keyspace */
+orgSelect.addEventListener('change', ()=> {
+  currentOrg = orgSelect.value;
+  localStorage.setItem('active_org', currentOrg);
+  document.getElementById('currentOrg').textContent = currentOrg;
+  renderAll();
+});
+
+/* refresh */
+document.getElementById('refreshBtn').addEventListener('click', ()=> renderAll());
+document.getElementById('seedBtn').addEventListener('click', ()=> seedDemo());
+
+/* =================================
+   Seed demo & initial data
+   ================================= */
+function seedDemo(){
+  // employees
+  nsSave(EMP_KEY, [
+    { id:'e_1', name:'Adjei James', role:'Manager', email:'james@school.com', salary:3500 },
+    { id:'e_2', name:'Emmanuel Ofori', role:'Data Analyst', email:'emmanuel@school.com', salary:2500 },
+    { id:'e_3', name:'Ama Serwaa', role:'Teacher', email:'ama@school.com', salary:2200 }
+  ]);
+  // clear payrolls
+  nsSave(HR_PAYROLL_KEY, []);
+  nsSave(FIN_APPROVED, []);
+  nsSave(FIN_MSG, []);
+  nsSave(FIN_AUDIT, []);
+  nsSave(TEACH_ATT, []);
+  nsSave(TEACH_TT, []);
+  nsSave(TEACH_NOTES, []);
+  nsSave(PAYMENT_ACCOUNTS, []);
+  nsSave(PAYMENTS_LOG, []);
+  showToast('Demo seeded');
+  renderAll();
+}
+
+/* =================================
+   Employees (HR)
+   ================================= */
+const employeesTable = document.getElementById('employeesTable');
+document.getElementById('addEmployeeBtn').addEventListener('click', ()=> {
+  const name = prompt('Name'); if(!name) return;
+  const role = prompt('Role','Staff') || 'Staff';
+  const email = prompt('Email','') || '';
+  const salary = Number(prompt('Salary','0')||0);
+  const arr = nsRead(EMP_KEY);
+  arr.push({ id: uid('e'), name, role, email, salary });
+  nsSave(EMP_KEY, arr);
+  pushAudit('HR','Added employee '+name);
+  renderEmployees(); renderAll();
+});
+
+function renderEmployees(){
+  const arr = nsRead(EMP_KEY);
+  employeesTable.innerHTML = '';
+  arr.forEach(e=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${e.name}</td><td>${e.role}</td><td>${e.email||''}</td><td>₵${Number(e.salary||0).toLocaleString()}</td>
+      <td><button onclick="editEmployee('${e.id}')">Edit</button> <button onclick="removeEmployee('${e.id}')">Delete</button></td>`;
+    employeesTable.appendChild(tr);
+  });
+  // payroll select
+  const sel = document.getElementById('paySelectEmployee'); sel.innerHTML='';
+  arr.forEach(e=> sel.appendChild(Object.assign(document.createElement('option'), { value:e.id, textContent:e.name })));
+  document.getElementById('kpiTeachers').textContent = arr.filter(x=>x.role && x.role.toLowerCase().includes('teacher')).length;
+}
+
+function editEmployee(id){
+  const arr = nsRead(EMP_KEY);
+  const e = arr.find(x=>x.id===id); if(!e) return;
+  const name = prompt('Name', e.name) || e.name;
+  const role = prompt('Role', e.role) || e.role;
+  const email = prompt('Email', e.email) || e.email;
+  const salary = Number(prompt('Salary', e.salary) || e.salary);
+  e.name = name; e.role = role; e.email = email; e.salary = salary;
+  nsSave(EMP_KEY, arr); pushAudit('HR','Updated employee '+name);
+  renderEmployees(); renderAll();
+}
+function removeEmployee(id){ if(!confirm('Delete employee?')) return; let arr=nsRead(EMP_KEY); arr=arr.filter(x=>x.id!==id); nsSave(EMP_KEY,arr); pushAudit('HR','Deleted employee '+id); renderEmployees(); renderAll(); }
+
+/* =================================
+   Payroll (HR side) — Prepare batch
+   ================================= */
+let currentBatch = { items: [] };
+
+document.getElementById('calcPayBtn').addEventListener('click', ()=> {
+  const empId = document.getElementById('paySelectEmployee').value;
+  if(!empId) return alert('Select employee');
+  const bonus = Number(document.getElementById('payBonus').value||0);
+  const deduct = Number(document.getElementById('payDeduct').value||0);
+  const emp = nsRead(EMP_KEY).find(x=>x.id===empId);
+  if(!emp) return alert('Employee not found');
+  const gross = Number(emp.salary||0) + bonus;
+  const tax = Math.round(gross*0.12); // basic tax calc
+  const net = gross - tax - deduct;
+  const item = { id: uid('it'), employeeId: empId, employee: emp.name, gross, bonus, deduct, tax, net };
+  currentBatch.items.push(item);
+  renderBatchItems();
+  document.getElementById('payBonus').value=''; document.getElementById('payDeduct').value='';
+});
+
+function renderBatchItems(){
+  const tbody = document.getElementById('batchItems'); tbody.innerHTML='';
+  currentBatch.items.forEach((it,i)=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${i+1}</td><td>${it.employee}</td><td>₵${it.gross}</td><td>₵${it.net}</td><td><button onclick="removeBatchItem('${it.id}')">Remove</button></td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function removeBatchItem(id){ currentBatch.items = currentBatch.items.filter(i=>i.id!==id); renderBatchItems(); }
+
+document.getElementById('sendToFinanceBtn').addEventListener('click', ()=> {
+  if(!currentBatch.items.length) return alert('Add items first');
+  const period = document.getElementById('batchPeriod').value || (new Date().toISOString().split('T')[0]);
+  const batchId = uid('batch');
+  const total = currentBatch.items.reduce((s,i)=>s + Number(i.net||0), 0);
+  const payload = { batchId, submittedBy: (localStorage.getItem('current_role')||'hr'), period, items: currentBatch.items, total, status:'pending', submittedAt: new Date().toISOString() };
+  const arr = nsRead(HR_PAYROLL_KEY);
+  arr.push(payload); nsSave(HR_PAYROLL_KEY, arr);
+  pushAudit('HR','Submitted payroll batch '+batchId);
+  currentBatch = { items: [] }; renderBatchItems(); document.getElementById('batchPeriod').value='';
+  showToast('Sent to Finance');
+  renderAll();
+});
+
+/* clear batch */
+document.getElementById('clearBatchBtn').addEventListener('click', ()=>{ if(confirm('Clear current batch?')){ currentBatch={items:[]}; renderBatchItems(); } });
+
+/* show saved batches */
+function renderSavedBatches(){
+  const arr = nsRead(HR_PAYROLL_KEY).slice().reverse();
+  const el = document.getElementById('savedBatches'); el.innerHTML = '';
+  arr.forEach(b=>{
+    const div = document.createElement('div');
+    div.innerHTML = `<div style="padding:8px;border-radius:6px;margin-bottom:6px;background:rgba(255,255,255,0.02)"><strong>${b.batchId}</strong> • ${b.period} • ${b.status} • ₵${b.total} <button style="margin-left:8px" onclick="viewBatch('${b.batchId}')">View</button></div>`;
+    el.appendChild(div);
+  });
+}
+
+/* =================================
+   Finance: pending / approve / pay
+   ================================= */
+function renderPending(){
+  const arr = nsRead(HR_PAYROLL_KEY).slice().reverse();
+  const tbody = document.getElementById('pendingTable'); tbody.innerHTML='';
+  arr.forEach((b,i)=>{
+    const status = b.status || 'pending';
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${i+1}</td><td>${b.batchId}</td><td>${b.submittedBy}</td><td>${b.period}</td><td>₵${b.total}</td>
+      <td><span class="status-pill ${status==='pending'?'status-pending':(status==='approved'?'status-approved':'status-rejected')}">${status}</span></td>
+      <td>
+        ${status==='pending'?`<button onclick="approveBatch('${b.batchId}')">Approve</button> <button onclick="rejectBatch('${b.batchId}')">Reject</button>`:
+        `<button onclick="viewApproved('${b.batchId}')">Details</button>`}
+      </td>`;
+    tbody.appendChild(tr);
+  });
+  document.getElementById('kpiPending').textContent = arr.filter(x=>x.status==='pending').length;
+}
+
+/* approve: shows payment modal to choose method */
+async function approveBatch(batchId){
+  const arr = nsRead(HR_PAYROLL_KEY);
+  const idx = arr.findIndex(x=>x.batchId===batchId); if(idx===-1) return alert('Not found');
+  const batch = arr[idx];
+  // Show quick chooser modal using prompt (for simplicity).
+  const accounts = nsRead(PAYMENT_ACCOUNTS);
+  if(!accounts.length){ if(!confirm('No linked accounts — add one now?')) return; openAccountsEditor(); return; }
+  // select account
+  const choices = accounts.map((a,i)=>`${i+1}) ${a.name} (${a.type}) ${a.number}`).join('\n');
+  const pick = Number(prompt('Choose account to pay with:\n'+choices+'\nEnter number', '1')||1);
+  const acc = accounts[pick-1] || accounts[0];
+  if(!acc) return alert('Invalid account');
+  // choose method stub
+  const method = acc.type;
+  // Call mock payment API (async)
+  pushAudit('Finance','Attempting payment for '+batchId, JSON.stringify({account:acc, method}));
+  showToast('Processing payment...');
+  try{
+    const result = await mockPaymentApi({ batch, account:acc, method });
+    // mark approved + paid record
+    const approved = nsRead(FIN_APPROVED);
+    const record = Object.assign({}, batch, { approvedBy: localStorage.getItem('current_role') || 'finance', approvedAt: new Date().toISOString(), paidOn: new Date().toISOString(), paidVia: method, paidAccount: acc });
+    approved.push(record); save(K(FIN_APPROVED()), approved);
+    // update hr batch status
+    arr[idx].status = 'approved'; arr[idx].processedAt = new Date().toISOString(); save(K(HR_PAYROLL_KEY()), arr);
+    // store payment log
+    const plog = nsRead(PAYMENTS_LOG); plog.push({ id: uid('pay'), batchId, amount: batch.total, method, account:acc, result, time:new Date().toISOString() }); nsSave(PAYMENTS_LOG, plog);
+    pushAudit('Finance','Approved & paid '+batchId);
+    showToast('Batch paid ✔');
+    renderAll();
+  }catch(err){
+    // mark failed/rejected
+    arr[idx].status='rejected'; arr[idx].rejectionReason=err.message||'Payment failed'; save(K(HR_PAYROLL_KEY()), arr);
+    pushAudit('Finance','Payment failed for '+batchId, err.message||'');
+    alert('Payment failed: '+(err.message||'unknown'));
+    renderAll();
+  }
+}
+
+function rejectBatch(batchId){
+  const arr = nsRead(HR_PAYROLL_KEY);
+  const b = arr.find(x=>x.batchId===batchId); if(!b) return;
+  const reason = prompt('Reason for rejection','Incorrect totals') || 'Rejected';
+  b.status = 'rejected'; b.rejectedBy = localStorage.getItem('current_role')||'finance'; b.rejectionReason = reason; b.processedAt = new Date().toISOString();
+  nsSave(HR_PAYROLL_KEY, arr);
+  pushAudit('Finance','Rejected payroll '+batchId, reason);
+  showToast('Rejected');
+  renderAll();
+}
+
+/* approve all visible */
+document.getElementById('approveAllBtn').addEventListener('click', ()=> {
+  const arr = nsRead(HR_PAYROLL_KEY).filter(b=>b.status==='pending');
+  if(!arr.length) return alert('No pending');
+  if(!confirm(`Approve & pay ${arr.length} batches?`)) return;
+  // approve sequentially
+  (async ()=> {
+    for(const b of arr){ await approveBatch(b.batchId); }
+  })();
+});
+
+/* view batch details */
+function viewBatch(batchId){
+  const arr = nsRead(HR_PAYROLL_KEY);
+  const b = arr.find(x=>x.batchId===batchId);
+  if(!b) return alert('Not found');
+  const items = b.items.map(it=> `${it.employee} • net ₵${it.net}`).join('\n');
+  alert(`Batch ${b.batchId}\nPeriod: ${b.period}\nTotal: ₵${b.total}\n\nItems:\n${items}`);
+}
+function viewApproved(batchId){ const arr=nsRead(FIN_APPROVED); const b=arr.find(x=>x.batchId===batchId); if(!b) return alert('Not found'); alert(`Approved ${b.batchId}\nPaid On: ${b.paidOn}\nTotal: ₵${b.total}`) }
+
+/* =================================
+   Payment accounts (linking)
+   ================================= */
+document.getElementById('addAccBtn').addEventListener('click', addPaymentAccount);
+function addPaymentAccount(){
+  const type = document.getElementById('accType').value;
+  const name = document.getElementById('accName').value.trim();
+  const number = document.getElementById('accNumber').value.trim();
+  if(!name||!number) return alert('Fill fields');
+  const arr = nsRead(PAYMENT_ACCOUNTS);
+  arr.push({ id: uid('acc'), type, name, number });
+  nsSave(PAYMENT_ACCOUNTS, arr);
+  document.getElementById('accName').value=''; document.getElementById('accNumber').value='';
+  renderAccounts();
+  showToast('Account added');
+}
+function renderAccounts(){
+  const arr = nsRead(PAYMENT_ACCOUNTS);
+  const el = document.getElementById('linkedAccountsList'); el.innerHTML='';
+  arr.forEach(a=> el.innerHTML += `<p><strong>${a.name}</strong> • ${a.type} • ${a.number}</p>`);
+  // populate selector (finance view)
+  const la = document.getElementById('linkedAccountsList');
+}
+renderAccounts();
+
+/* =================================
+   Teacher: attendance, notes, timetable
+   ================================= */
+document.getElementById('attInBtn').addEventListener('click', ()=> teacherClock('in'));
+document.getElementById('attOutBtn').addEventListener('click', ()=> teacherClock('out'));
+
+function teacherClock(action){
+  const email = document.getElementById('attTeacherEmail').value.trim();
+  if(!email) return alert('Enter teacher email');
+  const arr = nsRead(TEACH_ATT);
+  // store as object {email, action, date}
+  arr.push({ email, action, date: new Date().toISOString() });
+  nsSave(TEACH_ATT, arr);
+  pushAudit('Teacher','Clock '+action+' '+email);
+  renderTeacherAttendance();
+  showToast('Attendance recorded');
+}
+
+/* teacher notes */
+document.getElementById('postNoteBtn').addEventListener('click', ()=> {
+  const name = document.getElementById('tName').value || 'Teacher';
+  const body = document.getElementById('noteBody').value.trim();
+  if(!body) return alert('Write note');
+  const arr = nsRead(TEACH_NOTES);
+  arr.push({ id: uid('note'), author: name, body, time: new Date().toISOString() });
+  nsSave(TEACH_NOTES, arr);
+  document.getElementById('noteBody').value='';
+  pushAudit('Teacher','Posted note');
+  renderNotes();
+});
+
+/* save timetable */
+document.getElementById('saveTimetableBtn').addEventListener('click', ()=> {
+  const tt = document.getElementById('timetableBody').value.trim();
+  if(!tt) return alert('Enter timetable');
+  nsSave(TEACH_TT, { content: tt, savedAt: new Date().toISOString() });
+  pushAudit('Teacher','Saved timetable');
+  showToast('Timetable saved');
+});
+
+/* teacher sync button - push teacher attendance into HR attendance key for HR dashboard to see */
+document.getElementById('syncToHRBtn').addEventListener('click', ()=> {
+  // For demo, we copy TEACH_ATT to K(HR_ATT)
+  const teachArr = nsRead(TEACH_ATT);
+  const hrAttKey = 'attendance'; // hr uses K('attendance')
+  const hrArr = read(K(()=> hrAttKey));
+  // merge simple: append
+  const merged = hrArr.concat(teachArr.map(t=>({ employeeId: t.email, action: t.action, date: t.date })));
+  save(K(()=> hrAttKey), merged);
+  pushAudit('Teacher','Pushed attendance to HR');
+  showToast('Synced to HR');
+});
+
+/* Render notes/timetable/attendance */
+function renderNotes(){ const arr = nsRead(TEACH_NOTES).slice().reverse().slice(0,10); const el=document.getElementById('notesList'); el.innerHTML=''; arr.forEach(n=> el.innerHTML += `<div style="padding:8px;border-radius:6px;margin-bottom:6px;background:rgba(255,255,255,0.02)"><strong>${n.author}</strong> • ${new Date(n.time).toLocaleString()}<div class="small">${n.body}</div></div>`); }
+function renderTeacherAttendance(){ const att = nsRead(TEACH_ATT).slice().reverse().slice(0,10); const el=document.getElementById('teacherAttendanceWidget'); if(!att.length) el.textContent='No attendance'; else el.innerHTML = att.map(a=>`${a.email} • ${a.action.toUpperCase()} • ${new Date(a.date).toLocaleTimeString()}`).join('<br>'); }
+
+/* =================================
+   Messages
+   ================================= */
+document.getElementById('sendMsg').addEventListener('click', ()=> {
+  const to = document.getElementById('msgTo').value.trim();
+  const subj = document.getElementById('msgSub').value.trim();
+  const body = document.getElementById('msgBody').value.trim();
+  if(!to||!subj||!body) return alert('Fill fields');
+  const arr = nsRead(FIN_MSG);
+  arr.push({ id: uid('msg'), from: localStorage.getItem('current_role')||'unknown', to, subject: subj, body, date: new Date().toISOString() });
+  nsSave(FIN_MSG, arr);
+  pushAudit(localStorage.getItem('current_role')||'user','Sent message to '+to, subj);
+  showToast('Message sent');
+  renderMessages();
+});
+function renderMessages(){ const arr = nsRead(FIN_MSG).slice().reverse(); const el=document.getElementById('msgInbox'); el.innerHTML=''; arr.forEach(m=> el.innerHTML += `<div style="padding:8px;border-radius:6px;margin-bottom:6px;background:rgba(255,255,255,0.02)"><strong>${m.subject}</strong> • ${m.from} • ${new Date(m.date).toLocaleString()}<div class="small">${m.body}</div></div>`); }
+
+/* =================================
+   Audit log
+   ================================= */
+function pushAudit(actor, action, payload){ const logs = nsRead(FIN_AUDIT); logs.push({ id: uid('a'), actor, action, payload, time: new Date().toISOString() }); nsSave(FIN_AUDIT, logs); renderAudit(); }
+function renderAudit(){ const logs = nsRead(FIN_AUDIT).slice().reverse(); const el=document.getElementById('auditLog'); el.innerHTML=''; logs.forEach(l=> el.innerHTML += `<div style="padding:8px;border-bottom:1px solid rgba(255,255,255,0.02)"><strong>${l.actor}</strong> — ${l.action} <div class="small">${new Date(l.time).toLocaleString()}</div><div class="tiny">${l.payload||''}</div></div>`); }
+
+/* =================================
+   Exports / PDFs (payslip per employee and batch)
+   ================================= */
+function exportPayslip(employeeId, period='') {
+  const emp = nsRead(EMP_KEY).find(e=>e.id===employeeId);
+  if(!emp) return alert('Employee not found');
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF('p','pt','a4');
+  doc.setFontSize(16);
+  doc.text(`Payslip — ${emp.name}`, 40, 40);
+  doc.setFontSize(12);
+  doc.text(`Org: ${currentOrg}`, 40, 70);
+  doc.text(`Period: ${period || new Date().toISOString().split('T')[0]}`, 40, 88);
+  doc.text(`Salary: ₵${emp.salary}`, 40, 106);
+  doc.text(`Generated: ${new Date().toLocaleString()}`, 40, 124);
+  doc.save(`${emp.name.replace(/\s+/g,'_')}_payslip.pdf`);
+}
+function exportBatchPDF(batchId){
+  const arr = nsRead(FIN_APPROVED);
+  const b = arr.find(x=>x.batchId===batchId);
+  if(!b) return alert('batch not found');
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF('p','pt','a4');
+  doc.setFontSize(14); doc.text(`${currentOrg} — Payroll Batch ${b.batchId}`, 40, 40);
+  let y=70;
+  b.items.forEach((it,i)=>{ doc.text(`${i+1}. ${it.employee} — Net: ₵${it.net}`, 40, y); y+=14; if(y>720){ doc.addPage(); y=40;} });
+  doc.save(`${b.batchId}_payroll.pdf`);
+}
+
+/* CSV export helper */
+function exportCSV(rows, filename){
+  if(!rows.length) return alert('No data');
+  const keys = Object.keys(rows[0]);
+  const lines = [keys.join(',')];
+  rows.forEach(r=> lines.push(keys.map(k=>`"${String(r[k]||'').replace(/"/g,'""')}"`).join(',')));
+  const blob = new Blob([lines.join('\n')], { type:'text/csv' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename; a.click();
+}
+
+/* =================================
+   Mock Payment API (bank/momo)
+   ================================= */
+function mockPaymentApi({ batch, account, method }){
+  // This function simulates contacting a bank/MoMo API.
+  // It randomly succeeds or fails (for demo).
+  return new Promise((resolve, reject)=>{
+    setTimeout(()=>{
+      // 85% success, 15% fail
+      if(Math.random() < 0.85){
+        resolve({ status:'success', providerRef: uid('tx') });
+      } else {
+        reject(new Error('Network / provider error (mock)'));
+      }
+    }, 1200 + Math.random()*1600);
+  });
+}
+
+/* =================================
+   Render helpers & initial load
+   ================================= */
+function renderAll(){
+  populateOrgs();
+  renderEmployees();
+  renderSavedBatches();
+  renderPending();
+  renderAccounts();
+  renderMessages();
+  renderAudit();
+  renderNotes();
+  renderTeacherAttendance();
+  // KPIs
+  const pending = nsRead(HR_PAYROLL_KEY).filter(x=>x.status==='pending').length;
+  const approved = nsRead(FIN_APPROVED).length;
+  const payslips = 0;
+  document.getElementById('kpiPending').textContent = pending;
+  document.getElementById('kpiApproved').textContent = approved;
+  document.getElementById('kpiPayslips').textContent = payslips;
+}
+
+/* render payment accounts in finance view */
+function renderAccounts(){
+  const arr = nsRead(PAYMENT_ACCOUNTS);
+  const el = document.getElementById('linkedAccountsList'); el.innerHTML='';
+  arr.forEach(a=> el.innerHTML += `<p><strong>${a.name}</strong> • ${a.type} • ${a.number}</p>`);
+  // also ensure selector in payment modal etc (if added)
+}
+
+/* render messages and other small pieces already implemented above */
+
+/* wire exporters */
+document.getElementById('exportAllBtn').addEventListener('click', ()=> {
+  const data = {
+    employees: nsRead(EMP_KEY),
+    hr_batches: nsRead(HR_PAYROLL_KEY),
+    finance_approved: nsRead(FIN_APPROVED),
+    teacher_notes: nsRead(TEACH_NOTES)
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${currentOrg}_backup.json`; a.click();
+  showToast('Exported JSON');
+});
+
+/* Storage event to sync across tabs */
+window.addEventListener('storage', (e)=>{
+  // if any namespaced key changes, re-render
+  const keysToWatch = [K(HR_PAYROLL_KEY()), K(FIN_APPROVED()), K(PAYMENT_ACCOUNTS()), K(FIN_AUDIT()), K(TEACH_ATT()), K(EMP_KEY())];
+  if(keysToWatch.includes(e.key)){
+    setTimeout(()=> renderAll(), 120);
+  }
+});
+
+/* initial seed if empty */
+(function init(){
+  if(!localStorage.getItem(K(EMP_KEY()))){
+    seedDemo();
+  } else {
+    renderAll();
+  }
+})();
+
+/* convenience functions for console */
+window.portal = { renderAll, exportPayslip, exportBatchPDF, approveBatch, rejectBatch, mockPaymentApi };
+
+</script>
+</body>
+</html>
